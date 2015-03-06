@@ -1,0 +1,10 @@
+*.o
+*.swp
+lemon
+lex.yy.c
+parser.c
+parser.h
+tokenizer.h
+a.out
+parser.out
+sspas
