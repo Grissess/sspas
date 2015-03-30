@@ -1,3 +1,3 @@
-The lemon.c and lempar.c files are directly sourced from http://www.hwaci.com/sw/lemon/, used under the terms of the GPL.
+The lemon.c and lempar.c files are directly sourced from http://www.hwaci.com/sw/lemon/, used under the terms of the GPL. Similarly, makeheaders.c is from http://www.hwaci.com/sw/mkhdr/, used under terms of the two-clause BSD license.
 
 All other files are copyright myself, hereby made available under the WTFPL (which should be GPL-compatible :) ).

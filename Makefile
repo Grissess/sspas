@@ -16,5 +16,8 @@ lemon: lemon.c
 lex.yy.c tokenizer.h: tokenizer.l
 	flex --header-file=tokenizer.h $^
 
+makeheaders: makeheaders.c
+	$(CC) $(CCFLAGS) -o $@ $^
+
 clean:
 	rm *.o lex.yy.c tokenizer.h parser.c parser.h parser.out lemon
