@@ -105,3 +105,31 @@ void vec_copy(vector *from, vector *into) {
 	}
 }
 
+#if !defined(VECTOR_NO_GETSET) && (defined(VECTOR_GETSET_FUNCS) || defined(VECTOR_GETSET_BOUNDS))
+
+/* Hopefully, intelligent optimizers will lower this for the trivial case. These
+ * might be useful with function pointers, though.
+ */
+
+void *vec_get2(vector *v, size_t idx) {
+#ifdef VECTOR_GETSET_BOUNDS
+    if(idx >= v->len) return NULL;
+#endif
+    return v->buf[idx];
+}
+
+void *vec_get(vector *v, size_t idx) {
+#ifdef VECTOR_GETSET_BOUNDS
+    if(idx >= v->len) return NULL;
+#endif
+    return vec_get2(v, idx);
+}
+
+void *vec_set(vector *v, size_t idx, void *val) {
+#ifdef VECTOR_GETSET_BOUNDS
+    if(idx >= v->len) return val;
+#endif
+    return (v->buf[idx] = val); /* For compat with macro definition */
+}
+
+#endif
