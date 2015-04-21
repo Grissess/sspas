@@ -4,8 +4,10 @@
 #include "type.h"
 #include "vector.h"
 #include "scope.h"
+#include "lit.h"
 
 typedef enum {
+	EX_LIT,
 	EX_ASSIGN,
 	EX_INDEX,
 	EX_SETINDEX,
@@ -13,6 +15,10 @@ typedef enum {
 } expr_k;
 
 typedef struct _expr_node expr_node;
+
+typedef struct _lit_expr {
+	literal *lit;
+} lit_expr;
 
 typedef struct _assign_expr {
 	char *ident;
@@ -40,6 +46,7 @@ typedef struct _expr_node{
 	type *type;
 	size_t refcnt;
 	union {
+		lit_expr lit;
 		assign_expr assign;
 		index_expr index;
 		setindex_expr setindex;
@@ -109,11 +116,12 @@ typedef struct _stmt_node {
 
 /*********************************************************************/
 
+typedef struct _program program;
+
 typedef struct _program {
 	char *ident;
 	vector args; /* of char * */
 	scope scope;
-	location *loc;
 } program;
 
 #endif

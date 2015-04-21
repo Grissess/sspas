@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <assert.h>
+#include <string.h>
 
 #include "type.h"
 #include "vector.h"
@@ -24,21 +25,27 @@ type *type_new_real(void) {
 	return res;
 }
 
-type *type_new_array(type *base, ssize_t lbound, ssize_t ubound) {
+type *type_new_char(void) {
+	type *res = type_new();
+	res->kind = TP_CHAR;
+	return res;
+}
+
+type *type_new_array(type *base, ssize_t lbound, size_t size) {
 	type *res = type_new();
 	res->kind = TP_ARRAY;
-	res->base = base;
+	res->base = type_copy(base);
 	res->lbound = lbound;
-	res->ubound = ubound;
+	res->size = size;
 	return res;
 }
 
 type *type_new_func(type *ret, vector *args) {
 	type *res = type_new();
 	res->kind = TP_FUNC;
-	res->ret = ret;
+	res->ret = type_copy(ret);
     vec_init(&res->args);
-	vec_map(args, &res->args, type_copy);
+	vec_map(args, &res->args, (vec_map_f) type_copy, NULL);
 	return res;
 }
 
@@ -47,8 +54,8 @@ type *type_new_struct(vector *names, vector *types) {
 	res->kind = TP_STRUCT;
 	vec_init(&res->names);
 	vec_init(&res->types);
-	vec_map(names, &res->names, strdup);
-	vec_map(types, &res->types, type_copy);
+	vec_map(names, &res->names, (vec_map_f) strdup, NULL);
+	vec_map(types, &res->types, (vec_map_f) type_copy, NULL);
 	return res;
 }
 
@@ -80,16 +87,17 @@ void type_destroy(type *tp) {
 
 		case TP_FUNC:
 			type_delete(tp->ret);
-			vec_foreach(&tp->args, type_delete);
+			vec_foreach(&tp->args, type_delete, NULL);
 			break;
 
 		case TP_STRUCT: case TP_UNION:
-			vec_foreach(&tp->names, free);
-			vec_foreach(&tp->types, type_delete);
+			vec_foreach(&tp->names, free, NULL);
+			vec_foreach(&tp->types, type_delete, NULL);
 			break;
 
 		default:
 			assert(0);
+			break;
 	}
 	free(tp);
 }

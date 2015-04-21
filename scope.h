@@ -15,6 +15,7 @@ typedef struct _symbol {
 	union {
 		expr_node *expr;
 		program *prog;
+		void *ptr;
 	} init;
 } symbol;
 
