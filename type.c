@@ -13,25 +13,31 @@ type *type_new(void) {
 	return res;
 }
 
-type *type_new_int(void) {
+type *_type_simple_factory(type_k kind) {
 	type *res = type_new();
-	res->kind = TP_INT;
+	res->kind = kind;
 	return res;
+}
+
+type *type_new_int(void) {
+	static type *res = NULL;
+	if(!res) res = _type_simple_factory(TP_INT);
+	return type_copy(res);
 }
 
 type *type_new_real(void) {
-	type *res = type_new();
-	res->kind = TP_REAL;
-	return res;
+	static type *res = NULL;
+	if(!res) res = _type_simple_factory(TP_REAL);
+	return type_copy(res);
 }
 
 type *type_new_char(void) {
-	type *res = type_new();
-	res->kind = TP_CHAR;
-	return res;
+	static type *res = NULL;
+	if(!res) res = _type_simple_factory(TP_CHAR);
+	return type_copy(res);
 }
 
-type *type_new_array(type *base, ssize_t lbound, size_t size) {
+type *type_new_array(type *base, ssize_t lbound, ssize_t size) {
 	type *res = type_new();
 	res->kind = TP_ARRAY;
 	res->base = type_copy(base);
@@ -71,7 +77,7 @@ type *type_copy(type *tp) {
 }
 
 void type_delete(type *tp) {
-	if(!(tp->refcnt--)) {
+	if(!(--tp->refcnt)) {
 		type_destroy(tp);
 	}
 }
@@ -87,12 +93,15 @@ void type_destroy(type *tp) {
 
 		case TP_FUNC:
 			type_delete(tp->ret);
-			vec_foreach(&tp->args, type_delete, NULL);
+			vec_foreach(&tp->args, (vec_iter_f) type_delete, NULL);
+			vec_clear(&tp->args);
 			break;
 
 		case TP_STRUCT: case TP_UNION:
-			vec_foreach(&tp->names, free, NULL);
-			vec_foreach(&tp->types, type_delete, NULL);
+			vec_foreach(&tp->names, (vec_iter_f) free, NULL);
+			vec_clear(&tp->names);
+			vec_foreach(&tp->types, (vec_iter_f) type_delete, NULL);
+			vec_clear(&tp->types);
 			break;
 
 		default:
@@ -121,16 +130,16 @@ int type_equal(type *tpa, type *tpb) {
 			if(!type_equal(tpa->ret, tpb->ret)) {
 				return 0;
 			}
-			if(!vec_equal(&tpa->args, &tpb->args, type_equal)) {
+			if(!vec_equal(&tpa->args, &tpb->args, (vec_eq_f) type_equal)) {
 				return 0;
 			}
 			break;
 
 		case TP_STRUCT: case TP_UNION:
-			if(!vec_equal(&tpa->names, &tpb->names, string_equal)) {
+			if(!vec_equal(&tpa->names, &tpb->names, (vec_eq_f) string_equal)) {
 				return 0;
 			}
-			if(!vec_equal(&tpa->types, &tpb->types, type_equal)) {
+			if(!vec_equal(&tpa->types, &tpb->types, (vec_eq_f) type_equal)) {
 				return 0;
 			}
 			break;

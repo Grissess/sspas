@@ -1,80 +1,176 @@
-%include {#include <stdio.h>}
-%include {#include <assert.h>}
+%include {
+#include <stdio.h>
+#include <assert.h>
+
+#include "sem.h"
+#include "vector.h"
+
+#define NEW(ty) (malloc(sizeof(ty)))
+#define AS(ty, ex) ((ty *) (ex))
+}
+
+%token_prefix TOK_
+
+%token_type {void *}
+
+%extra_argument {ast_root *ast}
 
 
 
-program ::= PROGRAM IDENT LPAREN identifier_list RPAREN SEMICOLON declarations subprogram_declarations compound_statement DOT.
-	
-identifier_list ::= IDENT.
-identifier_list ::= identifier_list COMMA IDENT.
+object ::= PROGRAM IDENT(ident) argument_decl(args) SEMICOLON declarations(decls) compound_stmt(body) DOT. {
+	ast->prog = prog_new(ident, args, decls, body);
+}
 
-declarations ::= declarations VAR identifier_list COLON type SEMICOLON.
-declarations ::= .
+argument_decl(ret) ::= LPAREN argument_list(args) RPAREN. {
+	ret = args;
+}
 
-type ::= standard_type.
-type ::= ARRAY LBRACKET NUM DOTDOT NUM RBRACKET OF standard_type.
+argument_list(ret) ::= argument_list(args) argument(arg). {
+	vec_insert(args, args->len, arg);
+	ret = args;
+}
+argument_list(ret) ::= argument_list(args) SEMICOLON argument(arg). {
+	vec_insert(args, args->len, arg);
+	ret = args;
+}
+argument_list(ret) ::= . {
+	ret = NEW(vector);
+	vec_init(ret);
+}
 
-standard_type ::= INTEGER.
-standard_type ::= REAL.
+argument(ret) ::= IDENT(ident) COLON type(ty). {
+	ret = decl_new(ident, ty);
+}
+argument(ret) ::= IDENT(ident). {
+	ret = decl_new(ident, NULL);
+}
 
-subprogram_declarations ::= subprogram_declarations subprogram_declaration.
-subprogram_declarations ::= .
+declarations(ret) ::= declarations(decls) declaration(decl_set). {
+	vec_append(decl_set, decls);
+	ret = decls;
+}
+declarations(ret) ::= . {
+	ret = NEW(vector);
+	vec_init(ret);
+}
 
-subprogram_declaration ::= subprogram_head declarations compound_statement.
+declaration(ret) ::= VAR ident_list(idents) COLON type (ty) SEMICOLON. {
+	ret = NEW(vector);
+	vec_init(ret);
+	vec_map(idents, ret, (vec_map_f) decl_new, ty);
+	vec_clear(idents);
+	free(idents);
+}
 
-subprogram_head ::= FUNCTION IDENT arguments COLON standard_type SEMICOLON.
-subprogram_head ::= PROCEDURE IDENT arguments SEMICOLON.
+ident_list(ret) ::= ident_list(idents) IDENT(ident). {
+	vec_insert(idents, idents->len, ident);
+	ret = idents;
+}
+ident_list(ret) ::= . {
+	ret = NEW(vector);
+	vec_init(ret);
+}
 
-arguments ::= LPAREN parameter_list RPAREN.
-arguments ::= .
+type(ret) ::= INTEGER. {
+	ret = type_new_int();
+}
+type(ret) ::= REAL. {
+	ret = type_new_real();
+}
+type(ret) ::= CHARACTER. {
+	ret = type_new_char();
+}
+type(ret) ::= ARRAY LBRACKET INTEGER(lbound) DOTDOT INTEGER(ubound) RBRACKET OF type(base). {
+	ret = type_new_array(base, *lbound, *ubound - *lbound);
+}
+type(ret) ::= ARRAY LBRACKET INTEGER(lbound) DOTDOT RBRACKET OF type(base). {
+	ret = type_new_array(base, *lbound, -1);
+}
+type(ret) ::= LPAREN type_list(args) RPARENT ARROW type(retty). {
+	ret = type_new_func(retty, args);
+}
 
-parameter_list ::= identifier_list COLON type.
-parameter_list ::= parameter_list SEMICOLON identifier_list COLON type.
+type_list(ret) ::= type_list(types) type(ty). {
+	vec_insert(types, types->len, type_copy(ty));
+	ret = types;
+}
+type_list(ret) ::= type_list(types) COMMA type(ty). {
+	vec_insert(types, types->len, type_copy(ty));
+	ret = types;
+}
+type_list(ret) ::= . {
+	ret = NEW(vector);
+	vec_init(ret);
+}
 
-compound_statement ::= BEGIN_ optional_statements END.
+stmt(ret) ::= expr_stmt(stmt). {
+	ret = stmt;
+}
+stmt(ret) ::= while_stmt(stmt). {
+	ret = stmt;
+}
+stmt(ret) ::= if_stmt(stmt). {
+	ret = stmt;
+}
+stmt(ret) ::= for_stmt(stmt). {
+	ret = stmt;
+}
+stmt(ret) ::= iter_stmt(stmt). {
+	ret = stmt;
+}
+stmt(ret) ::= compound_stmt(stmt). {
+	ret = stmt;
+}
 
-optional_statements ::= statement_list.
-optional_statements ::= .
+expr_stmt(ret) ::= expr(expr). {
+	ret = st_new_expr(expr);
+}
 
-statement_list ::= statement.
-statement_list ::= statement_list SEMICOLON statement.
+while_stmt(ret) ::= WHILE expr(cond) DO stmt(body). {
+	ret = st_new_while(cond, body);
+}
 
-statement ::= variable ASSIGNOP expression.
-statement ::= procedure_statement.
-statement ::= compound_statement.
-statement ::= IF expression THEN statement ELSE statement.
-statement ::= WHILE expression DO statement.
+if_stmt(ret) ::= IF expr(cond) THEN stmt(iftrue). {
+	ret = st_new_if(cond, iftrue, NULL);
+}
+if_stmt(ret) ::= IF expr(cond) THEN stmt(iftrue) ELSE stmt(iffalse). {
+	ret = st_new_if(cond, iftrue, iffalse);
+}
 
-variable ::= IDENT.
-variable ::= IDENT LBRACKET expression RBRACKET.
+for_stmt(ret) ::= FOR LPAREN stmt(init) SEMICOLON expr(cond) SEMICOLON stmt(post) LPAREN stmt(body). {
+	ret = st_new_for(init, cond, post, body);
+}
 
-procedure_statement ::= IDENT.
-procedure_statement ::= IDENT LPAREN expression_list RPAREN.
+compound_stmt(ret) ::= BEGIN stmt_list(stmts) END. {
+	ret = st_new_compound(stmts);
+}
 
-expression_list ::= expression.
-expression_list ::= expression_list COMMA expression.
+stmt_list(ret) ::= stmt_list(stmts) stmt(stmt). {
+	vec_insert(stmts, stmts->len, st_copy(stmt));
+	ret = stmts;
+}
+stmt_list(ret) ::= stmt_list(stmts) SEMICOLON stmt(stmt). {
+	vec_insert(stmts, stmts->len, st_copy(stmt));
+	ret = stmts;
+}
+stmt_list(ret) ::= . {
+	ret = NEW(vector);
+	vec_init(ret);
+}
 
-expression ::= simple_expression.
-expression ::= simple_expression RELOP simple_expression.
+expr(ret) ::= assign_expr(expr). {
+	ret = expr;
+}
 
-simple_expression ::= term.
-simple_expression ::= sign term.
-simple_expression ::= simple_expression ADDOP term.
-
-term ::= factor.
-term ::= term MULOP factor.
-
-factor ::= IDENT.
-factor ::= IDENT LPAREN expression_list RPAREN.
-factor ::= NUM.
-factor ::= LPAREN expression RPAREN.
-factor ::= NOT factor.
-
-sign ::= ADDOP.
+assign_expr(ret) ::= IDENT(ident) ASSIGN logic_expr(expr). {
+	ret = ex_new_assign(ident, expr);
+}
+assign_expr(ret) ::= logic_expr(object) LBRACKET expr(index) RBRACKET ASSIGN logic_expr(value). {
+	ret = ex_new_setindex(
 
 
 
-%parse_accept {
+parse_accept {
 	fprintf(stderr, "Syntax check OK\n");
 }
 

@@ -44,13 +44,8 @@ void vec_alloc(vector *v, size_t cap) {
 }
 
 void vec_map(vector *vin, vector *vout, vec_map_f map, void *data) {
-	size_t i;
 	vec_clear(vout);
-	vec_alloc(vout, vin->len);
-	for(i = 0; i < vin->len; i++) {
-		vout->buf[i] = map(vin->buf[i], data);
-	}
-        vout->len = vin->len; /* XXX Race condition if map modifies vout */
+	vec_append_map(vin, vout, map, data);
 }
 
 void *vec_reduce(vector *v, vec_reduce_f reduce, void *init) {
@@ -106,6 +101,25 @@ void vec_copy(vector *from, vector *into) {
 	}
         into->len = from->len; /* But also see vec_map */
 }
+
+void vec_append(vector *from, vector *into) {
+	size_t i;
+	vec_alloc(into, into->len + from->len);
+	for(i = 0; i < from->len; i++) {
+		into->buf[into->len + i] = from->buf[i];
+	}
+	into->len += from->len;
+}
+
+void vec_append_map(vector *vin, vector *vout, vec_map_f map, void *data) {
+	size_t i;
+	vec_alloc(vout, vout->len + vin->len);
+	for(i = 0; i < vin->len; i++) {
+		vout->buf[vout->len + i] = map(vin->buf[i], data);
+	}
+        vout->len += vin->len; /* XXX Race condition if map modifies vout */
+}
+
 
 #if !defined(VECTOR_NO_GETSET) && (defined(VECTOR_GETSET_FUNCS) || defined(VECTOR_GETSET_BOUNDS))
 

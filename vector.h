@@ -29,6 +29,8 @@ int vec_equal(vector *va,vector *vb,vec_eq_f eq);
 void vec_foreach(vector *v,vec_iter_f iter,void *data);
 ssize_t vec_search(vector *v,void *val);
 void vec_copy(vector *from,vector *into);
+void vec_append(vector *from, vector *into);
+void vec_append_map(vector *from, vector *into, vec_map_f map, void *data);
 
 /* For data encapsulation purists (and perhaps for foresight) */
 

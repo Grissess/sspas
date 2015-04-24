@@ -12,6 +12,8 @@ typedef enum {
 	EX_INDEX,
 	EX_SETINDEX,
 	EX_CALL,
+	EX_UNOP,
+	EX_BINOP,
 } expr_k;
 
 typedef struct _expr_node expr_node;
@@ -41,6 +43,43 @@ typedef struct _call_expr {
 	vector params; /* of expr_node * */
 } call_expr;
 
+typedef enum {
+	OP_NEG,
+	OP_NOT,
+	OP_BNOT,
+	OP_IDENT,
+} unop_k;
+
+typedef struct _unop_expr {
+	unop_k kind;
+	expr_node *expr;
+} unop_expr;
+
+typedef enum {
+	OP_ADD,
+	OP_SUB,
+	OP_MUL,
+	OP_DIV,
+	OP_MOD,
+	OP_EQ,
+	OP_NEQ,
+	OP_LEQ,
+	OP_GEQ,
+	OP_LESS,
+	OP_GREATER,
+	OP_AND,
+	OP_OR,
+	OP_BAND,
+	OP_BOR,
+	OP_BXOR,
+} binop_k;
+
+typedef struct _binop_expr {
+	binop_k kind;
+	expr_node *left;
+	expr_node *right;
+} binop_expr;
+
 typedef struct _expr_node{
 	expr_k kind;
 	type *type;
@@ -51,6 +90,8 @@ typedef struct _expr_node{
 		index_expr index;
 		setindex_expr setindex;
 		call_expr call;
+		unop_expr unop;
+		binop_expr binop;
 	};
 } expr_node;
 
@@ -116,12 +157,33 @@ typedef struct _stmt_node {
 
 /*********************************************************************/
 
-typedef struct _program program;
+typedef struct _prog_node prog_node;
 
-typedef struct _program {
+typedef enum {
+	DECL_VAR,
+	DECL_FUNC,
+	DECL_PROC,
+} decl_k;
+
+typedef struct _decl_node {
 	char *ident;
-	vector args; /* of char * */
-	scope scope;
-} program;
+	type *type;
+	decl_k kind;
+	union {
+		expr_node *init;
+		prog_node *prog;
+	};
+} decl_node;
+
+typedef struct _prog_node {
+	char *ident;
+	vector args; /* of decl_node * */
+	vector decls; /* of decl_node * */
+	stmt_node *body;
+} prog_node;
+
+typedef struct _ast_root {
+	prog_node *prog;
+} ast_root;
 
 #endif

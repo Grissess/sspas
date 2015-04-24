@@ -26,7 +26,7 @@ typedef struct _type {
 		struct {
 			type *base;
 			ssize_t lbound;
-			size_t size;
+			ssize_t size;
 		};
 		struct {
 			type *ret;
@@ -43,7 +43,7 @@ type *type_new(void);
 type *type_new_int(void);
 type *type_new_real(void);
 type *type_new_char(void);
-type *type_new_array(type *base,ssize_t lbound,size_t size);
+type *type_new_array(type *base,ssize_t lbound,ssize_t size);
 type *type_new_func(type *ret,vector *args);
 type *type_new_struct(vector *names,vector *types);
 type *type_new_union(vector *names,vector *types);

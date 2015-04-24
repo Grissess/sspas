@@ -56,7 +56,7 @@ void lit_array_append(literal *arr, literal *lit) {
 }
 
 void lit_delete(literal *lit) {
-	if(!(lit->refcnt--)) {
+	if(!(--lit->refcnt)) {
 		lit_destroy(lit);
 	}
 }
@@ -67,6 +67,7 @@ void lit_destroy(literal *lit) {
 
 		case LIT_ARRAY:
 			vec_foreach(&lit->items, (vec_iter_f) lit_delete, NULL);
+			vec_clear(&lit->items);
 			break;
 
 		default:
