@@ -2,10 +2,15 @@
 #include <stdlib.h>
 #include "tokenizer.h"
 #include "parser.h"
+#include "ast.h"
+
+#include "toknames.c"
+
+extern void *semval;
 
 void *ParseAlloc(void *(*)(size_t));
 void ParseFree(void *, void (*)(void *));
-void Parse(void *, int, int);
+void Parse(void *, int, void *, ast_root *);
 void ParseTrace(FILE *, char *);
 
 int main(int argc, char **argv) {
@@ -13,7 +18,9 @@ int main(int argc, char **argv) {
 		YY_BUFFER_STATE yybuf;
 		void *parser;
 		int token;
-		
+		ast_root ast;
+		ast.prog = NULL;
+
 		if(argc > 2) {
 				fprintf(stderr, "Usage: %s [<infile>]\n\nInput defaults to standard input.\n", argv[0]);
 				return 1;
@@ -32,9 +39,16 @@ int main(int argc, char **argv) {
 		parser = ParseAlloc(malloc);
 		ParseTrace(stderr, "parser: ");
 		while(token = yylex()) {
-				Parse(parser, token, 0);
+				fprintf(stderr, " [%s] ", toknames[token]);
+				Parse(parser, token, semval, &ast);
 		}
+		Parse(parser, 0, NULL, &ast);
 		ParseFree(parser, free);
+
+		if(ast.prog)
+			prog_print(stderr, 0, ast.prog);
+		else
+			fprintf(stderr, "NULL object.\n");
 
 		return 0;
 }

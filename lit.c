@@ -1,9 +1,11 @@
 #include <stdlib.h>
 #include <assert.h>
+#include <stdio.h>
 
 #include "lit.h"
 #include "vector.h"
 #include "type.h"
+#include "util.h"
 
 literal *lit_new(void) {
 	literal *lit = malloc(sizeof(literal));
@@ -51,6 +53,19 @@ literal *lit_new_array(vector *init, type *fallback) {
 	return lit;
 }
 
+literal *lit_new_range(long lbound, size_t size) {
+	literal *lit = lit_new();
+	long i;
+	lit->kind = LIT_ARRAY;
+	vec_init(&lit->items);
+	vec_alloc(&lit->items, size);
+	for(i = 0; i < size; i++) {
+		vec_insert(&lit->items, i, lit_new_int(i));
+	}
+	lit->type = type_new_array(type_new_int(), 0, size);
+	return lit;
+}
+
 void lit_array_append(literal *arr, literal *lit) {
 	vec_insert(&arr->items, arr->items.len, lit_copy(lit));
 }
@@ -75,4 +90,36 @@ void lit_destroy(literal *lit) {
 	}
 	type_delete(lit->type);
 	free(lit);
+}
+
+void lit_print(FILE *out, int lev, literal *lit) {
+	size_t i;
+	if(!lit) {
+		wrlev(out, lev, "{NULL}");
+		return;
+	}
+	switch(lit->kind) {
+		case LIT_INT:
+			wrlev(out, lev, "{Integer (%s): %ld}", type_repr(lit->type), lit->ival);
+			break;
+
+		case LIT_REAL:
+			wrlev(out, lev, "{Real (%s): %f}", type_repr(lit->type), lit->fval);
+			break;
+
+		case LIT_CHAR:
+			wrlev(out, lev, "{Character (%s): %c}", type_repr(lit->type), lit->cval);
+			break;
+
+		case LIT_ARRAY:
+			wrlev(out, lev, "{Array: %s}", type_repr(lit->type));
+			for(i = 0; i < lit->items.len; i++) {
+				lit_print(out, lev+1, vec_get(&lit->items, i, literal));
+			}
+			break;
+
+		default:
+			wrlev(out, lev, "!!!{UNKNOWN LITERAL}!!!");
+			break;
+	}
 }

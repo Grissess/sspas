@@ -146,3 +146,67 @@ int type_equal(type *tpa, type *tpb) {
 	}
 	return 1;
 }
+
+#define TREPR_SZ 1024
+static char trepr[TREPR_SZ];
+
+char *type_repr(type *ty) {
+	char tbuffer[TREPR_SZ]={0};
+	int chars;
+	size_t i;
+	if(!ty) {
+		snprintf(trepr, TREPR_SZ, "NULL");
+		return trepr;
+	}
+	switch(ty->kind) {
+		case TP_INT:
+			chars = snprintf(tbuffer, TREPR_SZ, "integer");
+			break;
+
+		case TP_REAL:
+			chars = snprintf(tbuffer, TREPR_SZ, "real");
+			break;
+
+		case TP_CHAR:
+			chars = snprintf(tbuffer, TREPR_SZ, "character");
+			break;
+
+		case TP_ARRAY:
+			chars = snprintf(tbuffer, TREPR_SZ, "array[%ld..%ld] of %s", ty->lbound, ty->lbound + ty->size, type_repr(ty->base));
+			break;
+
+		case TP_BOOL:
+			chars = snprintf(tbuffer, TREPR_SZ, "(bool)");
+			break;
+
+		case TP_FUNC:
+			chars = snprintf(tbuffer, TREPR_SZ, "(");
+			for(i = 0; i < ty->args.len; i++) {
+				chars += snprintf(tbuffer+chars, TREPR_SZ-chars, "%s,", type_repr(vec_get(&ty->args, i, type)));
+			}
+			chars += snprintf(tbuffer+chars, TREPR_SZ-chars, ")->%s", type_repr(ty->ret));
+			break;
+
+		case TP_STRUCT:
+			chars = snprintf(tbuffer, TREPR_SZ, "struct (");
+			for(i = 0; i < ty->types.len; i++) {
+				chars += snprintf(tbuffer+chars, TREPR_SZ-chars, "%s: %s,", vec_get(&ty->names, i, char), type_repr(vec_get(&ty->types, i, type)));
+			}
+			chars += snprintf(tbuffer+chars, TREPR_SZ-chars, ")");
+			break;
+
+		case TP_UNION:
+			chars = snprintf(tbuffer, TREPR_SZ, "union (");
+			for(i = 0; i < ty->types.len; i++) {
+				chars += snprintf(tbuffer+chars, TREPR_SZ-chars, "%s: %s,", vec_get(&ty->names, i, char), type_repr(vec_get(&ty->types, i, type)));
+			}
+			chars += snprintf(tbuffer+chars, TREPR_SZ-chars, ")");
+			break;
+
+		default:
+			chars = snprintf(tbuffer, TREPR_SZ, "!!!UNKNOWN TYPE!!!");
+			break;
+	}
+	memmove(trepr, tbuffer, chars+1);
+	return trepr;
+}
