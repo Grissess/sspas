@@ -12,6 +12,7 @@ const char *toknames[] = {
 	"TOK_ASSIGN",
 	"TOK_FUNCTION",
 	"TOK_PROCEDURE",
+	"TOK_TYPE",
 	"TOK_INTEGER",
 	"TOK_REAL",
 	"TOK_CHARACTER",

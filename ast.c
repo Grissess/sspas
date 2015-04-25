@@ -455,6 +455,7 @@ decl_node *decl_new(const char *ident, type *ty) {
 	if(ty) res->type = type_copy(ty);
 	else res->type = NULL;
 	res->init = NULL;
+	res->kind = DECL_VAR;
 	return res;
 }
 
@@ -476,6 +477,12 @@ decl_node *decl_new_proc(const char *ident, type *ty, prog_node *prog) {
 	decl_node *res = decl_new(ident, ty);
 	res->prog = prog_copy(prog);
 	res->kind = DECL_PROC;
+	return res;
+}
+
+decl_node *decl_new_type(const char *ident, type *ty) {
+	decl_node *res = decl_new(ident, ty);
+	res->kind = DECL_TYPE;
 	return res;
 }
 
@@ -530,6 +537,10 @@ void decl_print(FILE *out, int lev, decl_node *decl) {
 			wrlev(out, lev+1, "type: %s", type_repr(decl->type));
 			wrlev(out, lev+1, "init:");
 			ex_print(out, lev+2, decl->init);
+			break;
+
+		case DECL_TYPE:
+			wrlev(out, lev, "(TypeDecl: %s => %s)", decl->ident, type_repr(decl->type));
 			break;
 
 		default:

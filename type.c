@@ -71,6 +71,13 @@ type *type_new_union(vector *names, vector *types) {
 	return res;
 }
 
+type *type_new_ref(const char *ref) {
+	type *res = type_new();
+	res->kind = TP_REF;
+	res->ref = strdup(ref);
+	return res;
+}
+
 type *type_copy(type *tp) {
 	tp->refcnt++;
 	return tp;
@@ -102,6 +109,10 @@ void type_destroy(type *tp) {
 			vec_clear(&tp->names);
 			vec_foreach(&tp->types, (vec_iter_f) type_delete, NULL);
 			vec_clear(&tp->types);
+			break;
+
+		case TP_REF:
+			free(tp->ref);
 			break;
 
 		default:
@@ -201,6 +212,10 @@ char *type_repr(type *ty) {
 				chars += snprintf(tbuffer+chars, TREPR_SZ-chars, "%s: %s,", vec_get(&ty->names, i, char), type_repr(vec_get(&ty->types, i, type)));
 			}
 			chars += snprintf(tbuffer+chars, TREPR_SZ-chars, ")");
+			break;
+
+		case TP_REF:
+			chars = snprintf(tbuffer, TREPR_SZ, "(ref: %s)", ty->ref);
 			break;
 
 		default:

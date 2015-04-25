@@ -210,6 +210,7 @@ typedef enum {
 	DECL_VAR,
 	DECL_FUNC,
 	DECL_PROC,
+	DECL_TYPE,
 } decl_k;
 
 typedef struct _decl_node {
@@ -238,6 +239,7 @@ decl_node *decl_new(const char *ident,type *ty);
 decl_node *decl_new_init(const char *ident,type *ty,expr_node *init);
 decl_node *decl_new_func(const char *ident,type *ty,prog_node *prog);
 decl_node *decl_new_proc(const char *ident,type *ty,prog_node *prog);
+decl_node *decl_new_type(const char *ident,type *ty);
 decl_node *decl_copy(decl_node *decl);
 void decl_delete(decl_node *decl);
 void decl_destroy(decl_node *decl);

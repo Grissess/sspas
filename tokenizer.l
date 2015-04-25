@@ -43,6 +43,7 @@ mod { return TOK_MOD; }
 and { return TOK_AND; }
 or { return TOK_OR; }
 to { return TOK_TO; }
+type { return TOK_TYPE; }
 
 ({letter}|_)({letter}|{digit}|_)* { semval = strdup(yytext); return TOK_IDENT; }
 

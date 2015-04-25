@@ -15,6 +15,7 @@ typedef enum {
 	TP_FUNC,
 	TP_STRUCT,
 	TP_UNION,
+	TP_REF,
 } type_k;
 
 typedef struct _type type;
@@ -36,6 +37,7 @@ typedef struct _type {
 			vector names; /* of char * */
 			vector types; /* of type * */
 		};
+		char *ref;
 	};
 } type;
 
@@ -47,6 +49,7 @@ type *type_new_array(type *base,ssize_t lbound,ssize_t size);
 type *type_new_func(type *ret,vector *args);
 type *type_new_struct(vector *names,vector *types);
 type *type_new_union(vector *names,vector *types);
+type *type_new_ref(const char *ref);
 type *type_copy(type *tp);
 void type_delete(type *tp);
 void type_destroy(type *tp);

@@ -9,33 +9,33 @@ program main( input, output );
 
   (* local function: mixed argument types *)
   function foo( a: integer; x: real; z: integer ): integer;
-    procedure boo( a: real );
-    begin
-        (* scope check on boo's a, main's b, d[] and y; and foo's z*)
-        boo( a * b + d[y + z] )
-    end;
+	procedure boo( a: real );
+	begin
+		(* scope check on boo's a, main's b, d[] and y; and foo's z*)
+		boo( a * b + d[y + z] )
+	end;
   begin
-    (* boo is visible; so is main's b *)
-    boo( b );
+	(* boo is visible; so is main's b *)
+	boo( b );
 
-    (* function return statement; scope and type check on foo's a and main's y *)
-    foo := a + y
+	(* function return statement; scope and type check on foo's a and main's y *)
+	foo := a + y
   end;
 
   (* local procedure *)
   procedure bar( c: integer );
   begin
-    (* nonlocal update *)
-    d[ c[foo(x,a,y)] ] := b
+	(* nonlocal update *)
+	d[ c[foo(x,a,y)] ] := b
   end;
 
   (* location function: recursive *)
   function moo( d: integer ): integer;
   begin
-    if ( d = 0 ) then
-        moo := 1
-    else
-        moo := d * moo( d - 1 )
+	if ( d = 0 ) then
+		moo := 1
+	else
+		moo := d * moo( d - 1 )
   end;
 
 begin
@@ -52,7 +52,7 @@ begin
   (* IF-THEN check *)
   if ( (c[x] * 6 < 7 + moo( y )) and (a > d[c[x]]) ) then
   begin
-    c[moo(foo(8,9.10,11.0)) + c[12]] := moo( c[y - 1] )
+	c[moo(foo(8,9.10,11.0)) + c[12]] := moo( c[y - 1] )
   end;
 
   (* PROCEDURE call: correct arguments, not used as expression *)
@@ -62,9 +62,10 @@ begin
   b := 10.0;
   for a := 1.0 to 2.0 * b do
   begin
-    bar( c[x + moo( c[x + moo( c[x + moo(1)] )] )] );
-    a := a + 0.0000001
+	bar( c[x + moo( c[x + moo( c[x + moo(1)] )] )] );
+	a := a + 0.0000001
   end
 
 end.
+
 

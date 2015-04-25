@@ -80,6 +80,11 @@ declaration(ret) ::= PROCEDURE IDENT(ident) argument_decl(args) SEMICOLON declar
 	vec_init(ret);
 	vec_insert(ret, 0, decl_new_proc(ident, NULL, prog_new(ident, args, decls, NULL, body)));
 }
+declaration(ret) ::= TYPE IDENT(ident) ASSIGN type(ty) SEMICOLON. {
+	ret = NEW(vector);
+	vec_init(ret);
+	vec_insert(ret, 0, decl_new_type(ident, ty));
+}
 
 ident_list(ret) ::= ident_list(idents) IDENT(ident). {
 	vec_insert(idents, AS(vector, idents)->len, ident);
@@ -111,6 +116,9 @@ type(ret) ::= ARRAY LBRACKET LIT_INTEGER(lbound) DOTDOT RBRACKET OF type(base). 
 }
 type(ret) ::= LPAREN type_list(args) RPAREN ARROW type(retty). {
 	ret = type_new_func(retty, args);
+}
+type(ret) ::= IDENT(ref). {
+	ret = type_new_ref(ref);
 }
 
 type_list(ret) ::= type_list(types) type(ty). {
