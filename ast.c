@@ -179,21 +179,21 @@ void ex_print(FILE *out, int lev, expr_node *ex) {
 	}
 	switch(ex->kind) {
 		case EX_LIT:
-			wrlev(out, lev, "Literal:");
+			wrlev(out, lev, "Literal: <%s>", type_repr(ex->type));
 			lit_print(out, lev+1, ex->lit.lit);
 			break;
 
 		case EX_REF:
-			wrlev(out, lev, "Reference: %s", ex->ref.ident);
+			wrlev(out, lev, "Reference: %s <%s>", ex->ref.ident, type_repr(ex->type));
 			break;
 
 		case EX_ASSIGN:
-			wrlev(out, lev, "Assign: %s :=", ex->assign.ident);
+			wrlev(out, lev, "Assign: %s := <%s>", ex->assign.ident, type_repr(ex->type));
 			ex_print(out, lev+1, ex->assign.value);
 			break;
 
 		case EX_INDEX:
-			wrlev(out, lev, "Index:");
+			wrlev(out, lev, "Index: <%s>", type_repr(ex->type));
 			wrlev(out, lev+1, "object:");
 			ex_print(out, lev+2, ex->index.object);
 			wrlev(out, lev+1, "index:");
@@ -201,7 +201,7 @@ void ex_print(FILE *out, int lev, expr_node *ex) {
 			break;
 
 		case EX_SETINDEX:
-			wrlev(out, lev, "SetIndex:");
+			wrlev(out, lev, "SetIndex: <%s>", type_repr(ex->type));
 			wrlev(out, lev+1, "object:");
 			ex_print(out, lev+2, ex->setindex.object);
 			wrlev(out, lev+1, "index:");
@@ -211,7 +211,7 @@ void ex_print(FILE *out, int lev, expr_node *ex) {
 			break;
 
 		case EX_CALL:
-			wrlev(out, lev, "Call:");
+			wrlev(out, lev, "Call: <%s>", type_repr(ex->type));
 			wrlev(out, lev+1, "func:");
 			ex_print(out, lev+2, ex->call.func);
 			wrlev(out, lev+1, "params:");
@@ -221,12 +221,12 @@ void ex_print(FILE *out, int lev, expr_node *ex) {
 			break;
 
 		case EX_UNOP:
-			wrlev(out, lev, "Unop: %s", unop_names[ex->unop.kind]);
+			wrlev(out, lev, "Unop: %s <%s>", unop_names[ex->unop.kind], type_repr(ex->type));
 			ex_print(out, lev+1, ex->unop.expr);
 			break;
 
 		case EX_BINOP:
-			wrlev(out, lev, "Binop: %s", binop_names[ex->binop.kind]);
+			wrlev(out, lev, "Binop: %s <%s>", binop_names[ex->binop.kind], type_repr(ex->type));
 			wrlev(out, lev+1, "left:");
 			ex_print(out, lev+2, ex->binop.left);
 			wrlev(out, lev+1, "right:");
@@ -234,7 +234,7 @@ void ex_print(FILE *out, int lev, expr_node *ex) {
 			break;
 
 		default:
-			wrlev(out, lev, "!!!UNKOWN EXPR_NODE!!!");
+			wrlev(out, lev, "!!!UNKOWN EXPR_NODE!!! <%s>", type_repr(ex->type));
 			break;
 	}
 }

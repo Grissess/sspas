@@ -43,7 +43,7 @@ void vec_append_map(vector *from, vector *into, vec_map_f map, void *data);
 #define vec_get3(vec, idx, tp) (((tp **) (vec)->buf)[(idx)])
 #define vec_get(...) MVA_DISPATCH(vec_get, __VA_ARGS__)
 
-#define vec_set(vec, idx, val) ((vec).buf[(idx)] = (val))
+#define vec_set(vec, idx, val) ((vec)->buf[(idx)] = (val))
 
 #else /* !defined(VECTOR_NO_GETSET) && (defined(VECTOR_GETSET_FUNCS)||defined(VECTOR_GETSET_BOUNDS))*/
 

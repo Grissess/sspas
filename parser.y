@@ -47,7 +47,7 @@ argument(ret) ::= IDENT(ident) COLON type(ty). {
 	ret = decl_new(ident, ty);
 }
 argument(ret) ::= IDENT(ident). {
-	ret = decl_new(ident, NULL);
+	ret = decl_new(ident, type_new_int());
 }
 
 declarations(ret) ::= declarations(decls) declaration(decl_set). {
@@ -188,9 +188,6 @@ range_stmt(ret) ::= FOR LPAREN IDENT(ident) ASSIGN expr(lbound) dotdot_or_to exp
 range_stmt(ret) ::= FOR IDENT(ident) ASSIGN expr(lbound) dotdot_or_to expr(ubound) DO stmt(body). {
 	ret = st_new_range(ident, lbound, ubound, NULL, body);
 }
-
-in_or_assign ::= IN.
-in_or_assign ::= ASSIGN.
 
 compound_stmt(ret) ::= BEGIN stmt_list(stmts) END. {
 	ret = st_new_compound(stmts);

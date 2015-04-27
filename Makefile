@@ -1,7 +1,7 @@
 CC = gcc
 CCFLAGS = -g
 
-sspas: ast.o vector.o util.o lit.o main.o type.o lex.yy.o parser.o tokenizer.h parser.h
+sspas: loc.o ast.o sem.o pass.o vector.o util.o lit.o main.o type.o lex.yy.o parser.o tokenizer.h parser.h
 	$(CC) $(CCFLAGS) -o $@ $^
 
 main.o: main.c toknames.c tokenizer.h parser.h
@@ -13,6 +13,9 @@ ast.o: ast.c ast.h
 lit.o: lit.c lit.h
 	$(CC) $(CCFLAGS) -c -o $@ lit.c
 
+loc.o: loc.c loc.h
+	$(CC) $(CCFLAGS) -c -o $@ loc.c
+
 type.o: type.c type.h
 	$(CC) $(CCFLAGS) -c -o $@ type.c
 
@@ -21,6 +24,12 @@ vector.o: vector.c vector.h
 
 util.o: util.c util.h
 	$(CC) $(CCFLAGS) -c -o $@ util.c
+
+sem.o: sem.c sem.h
+	$(CC) $(CCFLAGS) -c -o $@ sem.c
+
+pass.o: pass.c pass.h
+	$(CC) $(CCFLAGS) -c -o $@ pass.c
 
 toknames.c: parser.h
 	python mktoknames.py

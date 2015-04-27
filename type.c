@@ -49,7 +49,8 @@ type *type_new_array(type *base, ssize_t lbound, ssize_t size) {
 type *type_new_func(type *ret, vector *args) {
 	type *res = type_new();
 	res->kind = TP_FUNC;
-	res->ret = type_copy(ret);
+	if(ret) res->ret = type_copy(ret);
+	else res->ret = NULL;
     vec_init(&res->args);
 	vec_map(args, &res->args, (vec_map_f) type_copy, NULL);
 	return res;

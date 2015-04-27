@@ -3,6 +3,7 @@
 #include "tokenizer.h"
 #include "parser.h"
 #include "ast.h"
+#include "pass.h"
 
 #include "toknames.c"
 
@@ -18,6 +19,7 @@ int main(int argc, char **argv) {
 		YY_BUFFER_STATE yybuf;
 		void *parser;
 		int token;
+		object *obj = NULL;
 		ast_root ast;
 		ast.prog = NULL;
 
@@ -45,10 +47,22 @@ int main(int argc, char **argv) {
 		Parse(parser, 0, NULL, &ast);
 		ParseFree(parser, free);
 
-		if(ast.prog)
-			prog_print(stderr, 0, ast.prog);
-		else
+		if(!ast.prog) {
+			fprintf(stderr, "NULL tree.\n");
+			return 1;
+		}
+		fprintf(stderr, "Pre-pass AST:\n");
+		prog_print(stderr, 0, ast.prog);
+
+		obj = pass_do_all(&ast);
+		fprintf(stderr, "Post-pass AST:\n");
+		prog_print(stderr, 0, ast.prog);
+		if(!obj) {
 			fprintf(stderr, "NULL object.\n");
+			return 1;
+		}
+		fprintf(stderr, "Post-pass semantic tree:\n");
+		obj_print(stderr, 0, obj);
 
 		return 0;
 }

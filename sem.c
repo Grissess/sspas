@@ -6,13 +6,15 @@
 #include "type.h"
 #include "loc.h"
 #include "vector.h"
+#include "util.h"
 
 scope *scope_new_root(void) {
 	scope *res = malloc(sizeof(scope));
 	res->parent = NULL;
 	res->refcnt = 1;
 	vec_init(&res->children);
-	vec_init(&res->syms);
+	vec_init(&res->names);
+	vec_init(&res->types);
 	return res;
 }
 
@@ -27,6 +29,8 @@ scope *scope_new_above(scope *child) {
 	scope *res = scope_new_root();
 	vec_insert(&res->children, 0, scope_copy(child));
 	child->parent = scope_copy(res);
+	return res;
+}
 
 
 int _scope_test_sym_name(const char *name, symbol *sym, vector *syms, size_t idx) {
@@ -35,18 +39,44 @@ int _scope_test_sym_name(const char *name, symbol *sym, vector *syms, size_t idx
 }
 
 symbol *scope_resolve_name(scope *sco, const char *name) {
-	ssize_t idx = vec_test(&sco->syms, (vec_test_f) _scope_test_sym_name, (void *) name) - 1;
-	if(idx < 0 || idx >= sco->syms.len) return NULL;
-	return vec_get(&sco->syms, idx, symbol);
+	ssize_t idx = vec_test(&sco->names, (vec_test_f) _scope_test_sym_name, (void *) name) - 1;
+	if(idx < 0 || idx >= sco->names.len)
+		if(sco->parent)
+			return scope_resolve_name(sco->parent, name);
+		else
+			return NULL;
+	return vec_get(&sco->names, idx, symbol);
 }
 
-void scope_add_sym(scope *sco, symbol *sym) {
-	ssize_t idx = vec_test(&sco->syms, (vec_test_f) _scope_test_sym_name, (void *) sym->ident) - 1;
-	if(idx < 0 || idx >= sco->syms.len) {
-		vec_insert(&sco->syms, 0, sym_copy(sym));
+symbol *scope_resolve_type(scope *sco, const char *name) {
+	ssize_t idx = vec_test(&sco->types, (vec_test_f) _scope_test_sym_name, (void *) name) - 1;
+	if(idx < 0 || idx >= sco->types.len)
+		if(sco->parent)
+			return scope_resolve_type(sco->parent, name);
+		else
+			return NULL;
+	return vec_get(&sco->types, idx, symbol);
+}
+
+void scope_add_name(scope *sco, symbol *sym) {
+	assert(sym->kind != SYM_TYPE);
+	ssize_t idx = vec_test(&sco->names, (vec_test_f) _scope_test_sym_name, (void *) sym->ident) - 1;
+	if(idx < 0 || idx >= sco->names.len) {
+		vec_insert(&sco->names, 0, sym_copy(sym));
 	} else {
-		sym_delete(vec_get(&sco->syms, idx, symbol));
-		vec_set(&sco->syms, idx, sym_copy(sym));
+		sym_delete(vec_get(&sco->names, idx, symbol));
+		vec_set(&sco->names, idx, sym_copy(sym));
+	}
+}
+
+void scope_add_type(scope *sco, symbol *sym) {
+	assert(sym->kind == SYM_TYPE);
+	ssize_t idx = vec_test(&sco->types, (vec_test_f) _scope_test_sym_name, (void *) sym->ident) - 1;
+	if(idx < 0 || idx >= sco->types.len) {
+		vec_insert(&sco->types, 0, sym_copy(sym));
+	} else {
+		sym_delete(vec_get(&sco->types, idx, symbol));
+		vec_set(&sco->types, idx, sym_copy(sym));
 	}
 }
 
@@ -62,33 +92,57 @@ void scope_delete(scope *sco) {
 }
 
 void scope_destroy(scope *sco) {
-	vec_foreach(&sco->syms, sym_delete, NULL);
-	vec_foreach(&sco->children, scope_delete, NULL);
+	vec_foreach(&sco->names, (vec_iter_f) sym_delete, NULL);
+	vec_foreach(&sco->children, (vec_iter_f) scope_delete, NULL);
 	vec_remove(&sco->parent->children, vec_search(&sco->parent->children, sco));
 	free(sco);
 }
 
-symbol *sym_new(const char *ident, type *type, location *loc) {
+void scope_print(FILE *out, int lev, scope *sco) {
+	size_t i;
+	if(!sco) {
+		wrlev(out, lev, "[(NULL)]");
+		return;
+	}
+	wrlev(out, lev, "[SCOPE %p (IN %p)]", sco, sco->parent);
+	wrlev(out, lev+1, "names:");
+    for(i = 0; i < sco->names.len; i++) {
+		sym_print(out, lev+2, vec_get(&sco->names, i, symbol));
+	}
+	wrlev(out, lev+1, "types:");
+	for(i = 0; i < sco->types.len; i++) {
+		sym_print(out, lev+2, vec_get(&sco->types, i, symbol));
+	}
+}
+
+symbol *sym_new_data(const char *ident, type *type, location *loc) {
 	symbol *res = malloc(sizeof(symbol));
 	res->refcnt = 1;
 	res->kind = SYM_DATA;
 	res->ident = strdup(ident);
 	res->type = type_copy(type);
-	res->loc = loc_copy(loc);
+	if(loc) res->loc = loc_copy(loc);
+	else res->loc = NULL;
 	res->init.expr = NULL;
 	return res;
 }
 
-symbol *sym_new_expr(const char *ident, type *type, location *loc, expr_node *expr) {
-	symbol *res = sym_new(ident, type, loc);
+symbol *sym_new_data_init(const char *ident, type *type, location *loc, expr_node *expr) {
+	symbol *res = sym_new_data(ident, type, loc);
 	res->init.expr = ex_copy(expr);
 	return res;
 }
 
 symbol *sym_new_prog(const char *ident, type *type, location *loc, program *prog) {
-	symbol *res = sym_new(ident, type, loc);
+	symbol *res = sym_new_data(ident, type, loc);
 	res->kind = SYM_PROG;
-	res->init.prog = prog_copy(prog);
+	res->init.prog = program_copy(prog);
+	return res;
+}
+
+symbol *sym_new_type(const char *ident, type *type) {
+	symbol *res = sym_new_data(ident, type, NULL);
+	res->kind = SYM_TYPE;
 	return res;
 }
 
@@ -106,7 +160,7 @@ void sym_delete(symbol *sym) {
 void sym_destroy(symbol *sym) {
 	switch(sym->kind) {
 		case SYM_PROG:
-			prog_delete(sym->init.prog);
+			program_delete(sym->init.prog);
 			break;
 
 		case SYM_DATA:
@@ -119,44 +173,49 @@ void sym_destroy(symbol *sym) {
 	free(sym);
 }
 
-program *prog_new(const char *ident, vector *args, stmt_node *body) {
-	program *prog = malloc(sizeof(prog));
+void sym_print(FILE *out, int lev, symbol *sym) {
+	if(!sym) {
+		wrlev(out, lev, "[(NULL)]");
+		return;
+	}
+	wrlev(out, lev, "[SYM %s: %s]", sym->ident, type_repr(sym->type));
+	if(sym->kind == SYM_PROG) {
+		program_print(out, lev+1, sym->init.prog);
+	}
+}
+
+program *program_new(prog_node *node, scope *scope) {
+	program *prog = malloc(sizeof(program));
 	prog->refcnt = 1;
-	prog->ident = strdup(ident);
-	vec_map(args, &prog->args, strdup, NULL);
-	prog->body = st_copy(body);
-	prog->scope = NULL;
+	prog->node = prog_copy(node);
+	prog->scope = scope;
 	return prog;
 }
 
-program *prog_new_in(const char *ident, vector *args, program *super, stmt_node *body) {
-	program *prog = prog_new(ident, args, body)
-	prog->scope = scope_new(super->scope);
-	return prog;
-}
-
-program *prog_new_root(const char *ident, vector *args, stmt_node *body) {
-	program *prog = prog_new(ident, args, body);
-	prog->scope = scope_new_root();
-	return prog;
-}
-
-program *prog_copy(program *prog) {
+program *program_copy(program *prog) {
 	prog->refcnt++;
 	return prog;
 }
 
-void prog_delete(program *prog) {
+void program_delete(program *prog) {
 	if(!(--prog->refcnt)) {
-		prog_destroy(prog);
+		program_destroy(prog);
 	}
 }
 
-void prog_destroy(program *prog) {
-	vec_foreach(&prog->args, free, NULL);
-	vec_clear(&prog->args);
+void program_destroy(program *prog) {
 	scope_delete(prog->scope);
+	prog_delete(prog->node);
 	free(prog);
+}
+
+void program_print(FILE *out, int lev, program *prog) {
+	if(!prog) {
+		wrlev(out, lev, "[(NULL)]");
+		return;
+	}
+	wrlev(out, lev, "[PROGRAM: %s]", prog->node->ident);
+	scope_print(out, lev+1, prog->scope);
 }
 
 object *obj_new(void) {
@@ -166,11 +225,20 @@ object *obj_new(void) {
 }
 
 void obj_set_root_prog(object *obj, program *root_prog) {
-	if(obj->root_prog) prog_delete(obj->root_prog);
-	obj->root_prog = prog_copy(root_prog);
+	if(obj->root_prog) program_delete(obj->root_prog);
+	obj->root_prog = program_copy(root_prog);
 }
 
 void obj_delete(object *obj) {
-	if(obj->root_prog) prog_delete(root_prog);
+	if(obj->root_prog) program_delete(obj->root_prog);
 	free(obj);
+}
+
+void obj_print(FILE *out, int lev, object *obj) {
+	if(!obj) {
+		wrlev(out, lev, "[(NULL)]");
+		return;
+	}
+	wrlev(out, lev, "[OBJECT:]");
+	program_print(out, lev+1, obj->root_prog);
 }

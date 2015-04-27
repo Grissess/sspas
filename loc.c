@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <assert.h>
+#include <string.h>
 
 #include "loc.h"
 
@@ -29,7 +30,7 @@ location *loc_new_ind(location *addr) {
 	return res;
 }
 
-location *loc_new_off(location *addr, signed long amt) {
+location *loc_new_off(location *addr, location *amt) {
 	location *res = loc_new();
 	res->kind = LOC_OFF;
 	res->off.addr = loc_copy(addr);
