@@ -31,7 +31,7 @@ literal *lit_copy(literal *lit);
 literal *lit_new_int(long ival);
 literal *lit_new_real(double fval);
 literal *lit_new_char(char cval);
-literal *lit_new_array(vector *init,type *fallback);
+literal *lit_new_array(vector *init, type *fallback);
 literal *lit_new_range(long lbound, size_t size);
 void lit_delete(literal *lit);
 void lit_destroy(literal *lit);

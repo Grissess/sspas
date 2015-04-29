@@ -47,7 +47,9 @@ location *loc_new_reg(char *regname) {
 
 void loc_delete(location *loc) {
 	loc->refcnt--;
-	if(loc->refcnt <= 0) loc_destroy(loc);
+	if(loc->refcnt <= 0) {
+		loc_destroy(loc);
+	}
 }
 
 void loc_destroy(location *loc) {

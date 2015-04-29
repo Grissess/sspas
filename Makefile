@@ -1,5 +1,5 @@
 CC = gcc
-CCFLAGS = -g
+CCFLAGS = -g -Wall
 
 sspas: loc.o ast.o sem.o pass.o vector.o util.o lit.o main.o type.o lex.yy.o parser.o tokenizer.h parser.h
 	$(CC) $(CCFLAGS) -o $@ $^

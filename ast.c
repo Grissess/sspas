@@ -167,7 +167,9 @@ void ex_destroy(expr_node *ex) {
 			assert(0);
 			break;
 	}
-	if(ex->type) type_delete(ex->type);
+	if(ex->type) {
+		type_delete(ex->type);
+	}
 	free(ex);
 }
 
@@ -180,7 +182,7 @@ void ex_print(FILE *out, int lev, expr_node *ex) {
 	switch(ex->kind) {
 		case EX_LIT:
 			wrlev(out, lev, "Literal: <%s>", type_repr(ex->type));
-			lit_print(out, lev+1, ex->lit.lit);
+			lit_print(out, lev + 1, ex->lit.lit);
 			break;
 
 		case EX_REF:
@@ -189,48 +191,48 @@ void ex_print(FILE *out, int lev, expr_node *ex) {
 
 		case EX_ASSIGN:
 			wrlev(out, lev, "Assign: %s := <%s>", ex->assign.ident, type_repr(ex->type));
-			ex_print(out, lev+1, ex->assign.value);
+			ex_print(out, lev + 1, ex->assign.value);
 			break;
 
 		case EX_INDEX:
 			wrlev(out, lev, "Index: <%s>", type_repr(ex->type));
-			wrlev(out, lev+1, "object:");
-			ex_print(out, lev+2, ex->index.object);
-			wrlev(out, lev+1, "index:");
-			ex_print(out, lev+2, ex->index.index);
+			wrlev(out, lev + 1, "object:");
+			ex_print(out, lev + 2, ex->index.object);
+			wrlev(out, lev + 1, "index:");
+			ex_print(out, lev + 2, ex->index.index);
 			break;
 
 		case EX_SETINDEX:
 			wrlev(out, lev, "SetIndex: <%s>", type_repr(ex->type));
-			wrlev(out, lev+1, "object:");
-			ex_print(out, lev+2, ex->setindex.object);
-			wrlev(out, lev+1, "index:");
-			ex_print(out, lev+2, ex->setindex.index);
-			wrlev(out, lev+1, "value:");
-			ex_print(out, lev+2, ex->setindex.value);
+			wrlev(out, lev + 1, "object:");
+			ex_print(out, lev + 2, ex->setindex.object);
+			wrlev(out, lev + 1, "index:");
+			ex_print(out, lev + 2, ex->setindex.index);
+			wrlev(out, lev + 1, "value:");
+			ex_print(out, lev + 2, ex->setindex.value);
 			break;
 
 		case EX_CALL:
 			wrlev(out, lev, "Call: <%s>", type_repr(ex->type));
-			wrlev(out, lev+1, "func:");
-			ex_print(out, lev+2, ex->call.func);
-			wrlev(out, lev+1, "params:");
+			wrlev(out, lev + 1, "func:");
+			ex_print(out, lev + 2, ex->call.func);
+			wrlev(out, lev + 1, "params:");
 			for(i = 0; i < ex->call.params.len; i++) {
-				ex_print(out, lev+2, vec_get(&ex->call.params, i, expr_node));
+				ex_print(out, lev + 2, vec_get(&ex->call.params, i, expr_node));
 			}
 			break;
 
 		case EX_UNOP:
 			wrlev(out, lev, "Unop: %s <%s>", unop_names[ex->unop.kind], type_repr(ex->type));
-			ex_print(out, lev+1, ex->unop.expr);
+			ex_print(out, lev + 1, ex->unop.expr);
 			break;
 
 		case EX_BINOP:
 			wrlev(out, lev, "Binop: %s <%s>", binop_names[ex->binop.kind], type_repr(ex->type));
-			wrlev(out, lev+1, "left:");
-			ex_print(out, lev+2, ex->binop.left);
-			wrlev(out, lev+1, "right:");
-			ex_print(out, lev+2, ex->binop.right);
+			wrlev(out, lev + 1, "left:");
+			ex_print(out, lev + 2, ex->binop.left);
+			wrlev(out, lev + 1, "right:");
+			ex_print(out, lev + 2, ex->binop.right);
 			break;
 
 		default:
@@ -270,8 +272,11 @@ stmt_node *st_new_if(expr_node *cond, stmt_node *iftrue, stmt_node *iffalse) {
 	res->kind = ST_IF;
 	res->if_.cond = ex_copy(cond);
 	res->if_.iftrue = st_copy(iftrue);
-	if(iffalse) res->if_.iffalse = st_copy(iffalse);
-	else res->if_.iffalse = NULL;
+	if(iffalse) {
+		res->if_.iffalse = st_copy(iffalse);
+	} else {
+		res->if_.iffalse = NULL;
+	}
 	return res;
 }
 
@@ -285,14 +290,17 @@ stmt_node *st_new_for(stmt_node *init, expr_node *cond, stmt_node *post, stmt_no
 	return res;
 }
 
-stmt_node *st_new_range(char *ident,expr_node *lbound,expr_node *ubound,expr_node *step,stmt_node *body) {
+stmt_node *st_new_range(char *ident, expr_node *lbound, expr_node *ubound, expr_node *step, stmt_node *body) {
 	stmt_node *res = st_new();
 	res->kind = ST_RANGE;
 	res->range.ident = strdup(ident);
 	res->range.lbound = ex_copy(lbound);
 	res->range.ubound = ex_copy(ubound);
-	if(step) res->range.step = ex_copy(step);
-	else res->range.step = NULL;
+	if(step) {
+		res->range.step = ex_copy(step);
+	} else {
+		res->range.step = NULL;
+	}
 	res->range.body = st_copy(body);
 	return res;
 }
@@ -358,7 +366,9 @@ void st_destroy(stmt_node *st) {
 			free(st->range.ident);
 			ex_delete(st->range.lbound);
 			ex_delete(st->range.ubound);
-			if(st->range.step) ex_delete(st->range.step);
+			if(st->range.step) {
+				ex_delete(st->range.step);
+			}
 			st_delete(st->range.body);
 			break;
 
@@ -382,63 +392,63 @@ void st_print(FILE *out, int lev, stmt_node *st) {
 	switch(st->kind) {
 		case ST_EXPR:
 			wrlev(out, lev, "<Expr:>");
-			ex_print(out, lev+1, st->expr.expr);
+			ex_print(out, lev + 1, st->expr.expr);
 			break;
 
 		case ST_WHILE:
 			wrlev(out, lev, "<While:>");
-			wrlev(out, lev+1, "cond:");
-			ex_print(out, lev+2, st->while_.cond);
-			wrlev(out, lev+1, "body:");
-			st_print(out, lev+2, st->while_.body);
+			wrlev(out, lev + 1, "cond:");
+			ex_print(out, lev + 2, st->while_.cond);
+			wrlev(out, lev + 1, "body:");
+			st_print(out, lev + 2, st->while_.body);
 			break;
 
 		case ST_IF:
 			wrlev(out, lev, "<If:>");
-			wrlev(out, lev+1, "cond:");
-			ex_print(out, lev+2, st->if_.cond);
-			wrlev(out, lev+1, "iftrue:");
-			st_print(out, lev+2, st->if_.iftrue);
-			wrlev(out, lev+1, "iffalse:");
-			st_print(out, lev+2, st->if_.iffalse);
+			wrlev(out, lev + 1, "cond:");
+			ex_print(out, lev + 2, st->if_.cond);
+			wrlev(out, lev + 1, "iftrue:");
+			st_print(out, lev + 2, st->if_.iftrue);
+			wrlev(out, lev + 1, "iffalse:");
+			st_print(out, lev + 2, st->if_.iffalse);
 			break;
 
 		case ST_FOR:
 			wrlev(out, lev, "<For:>");
-			wrlev(out, lev+1, "init:");
-			st_print(out, lev+2, st->for_.init);
-			wrlev(out, lev+1, "cond:");
-			ex_print(out, lev+2, st->for_.cond);
-			wrlev(out, lev+1, "post:");
-			st_print(out, lev+2, st->for_.post);
-			wrlev(out, lev+1, "body:");
-			st_print(out, lev+2, st->for_.body);
+			wrlev(out, lev + 1, "init:");
+			st_print(out, lev + 2, st->for_.init);
+			wrlev(out, lev + 1, "cond:");
+			ex_print(out, lev + 2, st->for_.cond);
+			wrlev(out, lev + 1, "post:");
+			st_print(out, lev + 2, st->for_.post);
+			wrlev(out, lev + 1, "body:");
+			st_print(out, lev + 2, st->for_.body);
 			break;
 
 		case ST_ITER:
 			wrlev(out, lev, "<Iter: %s>", st->iter.ident);
-			wrlev(out, lev+1, "value:");
-			ex_print(out, lev+2, st->iter.value);
-			wrlev(out, lev+1, "body:");
-			st_print(out, lev+2, st->iter.body);
+			wrlev(out, lev + 1, "value:");
+			ex_print(out, lev + 2, st->iter.value);
+			wrlev(out, lev + 1, "body:");
+			st_print(out, lev + 2, st->iter.body);
 			break;
 
 		case ST_RANGE:
 			wrlev(out, lev, "<Range: %s>", st->range.ident);
-			wrlev(out, lev+1, "lbound:");
-			ex_print(out, lev+2, st->range.lbound);
-			wrlev(out, lev+1, "ubound:");
-			ex_print(out, lev+2, st->range.ubound);
-			wrlev(out, lev+1, "step:");
-			ex_print(out, lev+2, st->range.step);
-			wrlev(out, lev+1, "body:");
-			st_print(out, lev+2, st->range.body);
+			wrlev(out, lev + 1, "lbound:");
+			ex_print(out, lev + 2, st->range.lbound);
+			wrlev(out, lev + 1, "ubound:");
+			ex_print(out, lev + 2, st->range.ubound);
+			wrlev(out, lev + 1, "step:");
+			ex_print(out, lev + 2, st->range.step);
+			wrlev(out, lev + 1, "body:");
+			st_print(out, lev + 2, st->range.body);
 			break;
 
 		case ST_COMPOUND:
 			wrlev(out, lev, "<Compound:>");
 			for(i = 0; i < st->compound.stmts.len; i++) {
-				st_print(out, lev+1, vec_get(&st->compound.stmts, i, stmt_node));
+				st_print(out, lev + 1, vec_get(&st->compound.stmts, i, stmt_node));
 			}
 			break;
 
@@ -452,8 +462,11 @@ decl_node *decl_new(const char *ident, type *ty) {
 	decl_node *res = malloc(sizeof(decl_node));
 	assert(res);
 	res->ident = strdup(ident);
-	if(ty) res->type = type_copy(ty);
-	else res->type = NULL;
+	if(ty) {
+		res->type = type_copy(ty);
+	} else {
+		res->type = NULL;
+	}
 	res->init = NULL;
 	res->kind = DECL_VAR;
 	return res;
@@ -496,12 +509,15 @@ void decl_delete(decl_node *decl) {
 
 void decl_destroy(decl_node *decl) {
 	switch(decl->kind) {
-		case DECL_FUNC: case DECL_PROC:
+		case DECL_FUNC:
+		case DECL_PROC:
 			prog_delete(decl->prog);
 			break;
 
 		case DECL_VAR:
-			if(decl->init) ex_delete(decl->init);
+			if(decl->init) {
+				ex_delete(decl->init);
+			}
 			break;
 
 		default:
@@ -520,23 +536,23 @@ void decl_print(FILE *out, int lev, decl_node *decl) {
 	switch(decl->kind) {
 		case DECL_FUNC:
 			wrlev(out, lev, "(FuncDecl: %s)", decl->ident);
-			wrlev(out, lev+1, "type: %s", type_repr(decl->type));
-			wrlev(out, lev+1, "program:");
-			prog_print(out, lev+2, decl->prog);
+			wrlev(out, lev + 1, "type: %s", type_repr(decl->type));
+			wrlev(out, lev + 1, "program:");
+			prog_print(out, lev + 2, decl->prog);
 			break;
 
 		case DECL_PROC:
 			wrlev(out, lev, "(ProcDecl: %s)", decl->ident);
-			wrlev(out, lev+1, "type: %s", type_repr(decl->type));
-			wrlev(out, lev+1, "program:");
-			prog_print(out, lev+2, decl->prog);
+			wrlev(out, lev + 1, "type: %s", type_repr(decl->type));
+			wrlev(out, lev + 1, "program:");
+			prog_print(out, lev + 2, decl->prog);
 			break;
 
 		case DECL_VAR:
 			wrlev(out, lev, "(Decl: %s)", decl->ident);
-			wrlev(out, lev+1, "type: %s", type_repr(decl->type));
-			wrlev(out, lev+1, "init:");
-			ex_print(out, lev+2, decl->init);
+			wrlev(out, lev + 1, "type: %s", type_repr(decl->type));
+			wrlev(out, lev + 1, "init:");
+			ex_print(out, lev + 2, decl->init);
 			break;
 
 		case DECL_TYPE:
@@ -556,8 +572,11 @@ prog_node *prog_new(const char *ident, vector *args, vector *decls, type *ret, s
 	vec_init(&res->decls);
 	vec_map(args, &res->args, (vec_map_f) decl_copy, NULL);
 	vec_map(decls, &res->decls, (vec_map_f) decl_copy, NULL);
-	if(ret) res->ret = type_copy(ret);
-	else res->ret = NULL;
+	if(ret) {
+		res->ret = type_copy(ret);
+	} else {
+		res->ret = NULL;
+	}
 	res->body = st_copy(body);
 	return res;
 }
@@ -577,7 +596,9 @@ void prog_destroy(prog_node *prog) {
 	vec_clear(&prog->args);
 	vec_clear(&prog->decls);
 	st_delete(prog->body);
-	if(prog->ret) type_delete(prog->ret);
+	if(prog->ret) {
+		type_delete(prog->ret);
+	}
 	free(prog);
 }
 
@@ -588,15 +609,15 @@ void prog_print(FILE *out, int lev, prog_node *prog) {
 		return;
 	}
 	wrlev(out, lev, "[Program: %s]", prog->ident);
-	wrlev(out, lev+1, "arguments:");
+	wrlev(out, lev + 1, "arguments:");
 	for(i = 0; i < prog->args.len; i++) {
-		decl_print(out, lev+2, vec_get(&prog->args, i, decl_node));
+		decl_print(out, lev + 2, vec_get(&prog->args, i, decl_node));
 	}
-	wrlev(out, lev+1, "declarations:");
+	wrlev(out, lev + 1, "declarations:");
 	for(i = 0; i < prog->decls.len; i++) {
-		decl_print(out, lev+2, vec_get(&prog->decls, i, decl_node));
+		decl_print(out, lev + 2, vec_get(&prog->decls, i, decl_node));
 	}
-	wrlev(out, lev+1, "return: %s", type_repr(prog->ret));
-	wrlev(out, lev+1, "body:");
-	st_print(out, lev+2, prog->body);
+	wrlev(out, lev + 1, "return: %s", type_repr(prog->ret));
+	wrlev(out, lev + 1, "body:");
+	st_print(out, lev + 2, prog->body);
 }

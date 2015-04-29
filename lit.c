@@ -46,9 +46,15 @@ literal *lit_new_array(vector *init, type *fallback) {
 	literal *lit = lit_new();
 	lit->kind = LIT_ARRAY;
 	vec_init(&lit->items);
-	if(init) vec_map(init, &lit->items, (vec_map_f) lit_copy, NULL);
-	if(!fallback && lit->items.len > 0) fallback = vec_get(&lit->items, 0, literal)->type;
-	if(!fallback) fallback = type_new_int(); /* FIXME */
+	if(init) {
+		vec_map(init, &lit->items, (vec_map_f) lit_copy, NULL);
+	}
+	if(!fallback && lit->items.len > 0) {
+		fallback = vec_get(&lit->items, 0, literal)->type;
+	}
+	if(!fallback) {
+		fallback = type_new_int();    /* FIXME */
+	}
 	lit->type = type_new_array(fallback, 0, lit->items.len);
 	return lit;
 }
@@ -77,7 +83,9 @@ void lit_delete(literal *lit) {
 }
 void lit_destroy(literal *lit) {
 	switch(lit->kind) {
-		case LIT_INT: case LIT_REAL: case LIT_CHAR:
+		case LIT_INT:
+		case LIT_REAL:
+		case LIT_CHAR:
 			break;
 
 		case LIT_ARRAY:
@@ -114,7 +122,7 @@ void lit_print(FILE *out, int lev, literal *lit) {
 		case LIT_ARRAY:
 			wrlev(out, lev, "{Array: %s}", type_repr(lit->type));
 			for(i = 0; i < lit->items.len; i++) {
-				lit_print(out, lev+1, vec_get(&lit->items, i, literal));
+				lit_print(out, lev + 1, vec_get(&lit->items, i, literal));
 			}
 			break;
 

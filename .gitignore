@@ -1,6 +1,7 @@
 *.o
 *.swp
 *.swo
+*.orig
 lemon
 makeheaders
 lex.yy.c

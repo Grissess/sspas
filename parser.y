@@ -183,10 +183,10 @@ iter_stmt(ret) ::= FOR IDENT(ident) IN expr(value) DO stmt(body). {
 }
 
 range_stmt(ret) ::= FOR LPAREN IDENT(ident) ASSIGN expr(lbound) dotdot_or_to expr(ubound) RPAREN DO stmt(body). {
-	ret = st_new_range(ident, lbound, ubound, NULL, body);
+	ret = st_new_range(ident, lbound, ubound, ex_new_lit(lit_new_real(1.0)), body);
 }
 range_stmt(ret) ::= FOR IDENT(ident) ASSIGN expr(lbound) dotdot_or_to expr(ubound) DO stmt(body). {
-	ret = st_new_range(ident, lbound, ubound, NULL, body);
+	ret = st_new_range(ident, lbound, ubound, ex_new_lit(lit_new_real(1.0)), body);
 }
 
 compound_stmt(ret) ::= BEGIN stmt_list(stmts) END. {

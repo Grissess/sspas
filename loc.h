@@ -44,7 +44,7 @@ location *loc_new(void);
 location *loc_copy(location *loc);
 location *loc_new_mem(size_t addr);
 location *loc_new_ind(location *addr);
-location *loc_new_off(location *addr,location *amt);
+location *loc_new_off(location *addr, location *amt);
 location *loc_new_reg(char *regname);
 void loc_delete(location *loc);
 void loc_destroy(location *loc);

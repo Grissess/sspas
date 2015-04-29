@@ -47,7 +47,7 @@ begin
   y := c[ x + c[y] * 45 ];
 
   (* FUNCTION call and ARRAY access *)
-  y := foo( x + c[y + foo(c[1], d[2], a)] * 1, 2.3 + d[c[foo(c[3],b,d[y])]] );
+  y := foo( x + c[y + foo(c[1], d[2], a)] * 1, 2.3 + d[c[foo(c[3],b,d[y])]], -1 );
 
   (* IF-THEN check *)
   if ( (c[x] * 6 < 7 + moo( y )) and (a > d[c[x]]) ) then
