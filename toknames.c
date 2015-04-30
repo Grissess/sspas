@@ -56,5 +56,6 @@ const char *toknames[] = {
 	"TOK_LIT_CHAR",
 	"TOK_LBRACE",
 	"TOK_RBRACE",
+	"TOK_INDIRECT",
 	"TOK_TO",
 };

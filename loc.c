@@ -38,10 +38,24 @@ location *loc_new_off(location *addr, location *amt) {
 	return res;
 }
 
-location *loc_new_reg(char *regname) {
+location *loc_new_reg(reg_k kind) {
 	location *res = loc_new();
 	res->kind = LOC_REG;
-	res->reg.reg = strdup(regname);
+	res->reg.kind = kind;
+	return res;
+}
+
+location *loc_new_sym(char *name) {
+	location *res = loc_new();
+	res->kind = LOC_SYM;
+	res->sym.name = strdup(name);
+	return res;
+}
+
+location *loc_new_size(type *ty) {
+	location *res = loc_new();
+	res->kind = LOC_SIZE;
+	res->size.type = type_copy(ty);
 	return res;
 }
 
@@ -67,7 +81,18 @@ void loc_destroy(location *loc) {
 			break;
 
 		case LOC_REG:
-			free(loc->reg.reg);
+			break;
+
+		case LOC_SYM:
+			free(loc->sym.name);
+			break;
+
+		case LOC_SIZE:
+			type_delete(loc->size.type);
+			break;
+
+		default:
+			assert(0);
 			break;
 	}
 	free(loc);

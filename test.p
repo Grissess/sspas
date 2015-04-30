@@ -23,7 +23,7 @@ program main( input, output );
   end;
 
   (* local procedure *)
-  procedure bar( c: integer );
+  procedure bar( s: integer );
   begin
 	(* nonlocal update *)
 	d[ c[foo(x,a,y)] ] := b

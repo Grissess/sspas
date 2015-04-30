@@ -372,7 +372,14 @@ lit_expr(ret) ::= LBRACE expr_list(init) RBRACE COLON type(fallback). {
 lit_expr(ret) ::= LBRACE expr_list(init) RBRACE. {
 	ret = ex_new_lit(lit_new_array(init, NULL));
 }
-lit_expr(ret) ::= ref_expr(expr). {
+lit_expr(ret) ::= ind_expr(expr). {
+	ret = expr;
+}
+
+ind_expr(ret) ::= INDIRECT ind_expr(ind). {
+	ret = ex_new_ind(ind);
+}
+ind_expr(ret) ::= ref_expr(expr). {
 	ret = expr;
 }
 

@@ -16,6 +16,8 @@ typedef enum {
 	EX_CALL,
 	EX_UNOP,
 	EX_BINOP,
+	EX_RETURN,
+	EX_IND,
 } expr_k;
 
 typedef struct _expr_node expr_node;
@@ -88,6 +90,14 @@ typedef struct _binop_expr {
 	expr_node *right;
 } binop_expr;
 
+typedef struct _return_expr {
+	expr_node *value;
+} return_expr;
+
+typedef struct _ind_expr {
+	expr_node *lvalue;
+} ind_expr;
+
 typedef struct _expr_node {
 	expr_k kind;
 	type *type;
@@ -101,6 +111,8 @@ typedef struct _expr_node {
 		call_expr call;
 		unop_expr unop;
 		binop_expr binop;
+		return_expr return_;
+		ind_expr ind;
 	};
 } expr_node;
 
@@ -114,6 +126,8 @@ expr_node *ex_new_setindex(expr_node *object, expr_node *index, expr_node *value
 expr_node *ex_new_call(expr_node *func, vector *params);
 expr_node *ex_new_unop(unop_k kind, expr_node *expr);
 expr_node *ex_new_binop(expr_node *left, binop_k kind, expr_node *right);
+expr_node *ex_new_return(expr_node *);
+expr_node *ex_new_ind(expr_node *);
 void ex_delete(expr_node *ex);
 void ex_destroy(expr_node *ex);
 void ex_print(FILE *, int, expr_node *);

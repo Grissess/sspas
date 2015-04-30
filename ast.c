@@ -114,6 +114,20 @@ expr_node *ex_new_binop(expr_node *left, binop_k kind, expr_node *right) {
 	return res;
 }
 
+expr_node *ex_new_return(expr_node *value) {
+	expr_node *res = ex_new();
+	res->kind = EX_RETURN;
+	res->return_.value = ex_copy(value);
+	return res;
+}
+
+expr_node *ex_new_ind(expr_node *lvalue) {
+	expr_node *res = ex_new();
+	res->kind = EX_IND;
+	res->ind.lvalue = ex_copy(lvalue);
+	return res;
+}
+
 void ex_delete(expr_node *ex) {
 	if(!(--ex->refcnt)) {
 		ex_destroy(ex);
@@ -161,6 +175,14 @@ void ex_destroy(expr_node *ex) {
 		case EX_BINOP:
 			ex_delete(ex->binop.left);
 			ex_delete(ex->binop.right);
+			break;
+
+		case EX_RETURN:
+			ex_delete(ex->return_.value);
+			break;
+
+		case EX_IND:
+			ex_delete(ex->ind.lvalue);
 			break;
 
 		default:
@@ -233,6 +255,16 @@ void ex_print(FILE *out, int lev, expr_node *ex) {
 			ex_print(out, lev + 2, ex->binop.left);
 			wrlev(out, lev + 1, "right:");
 			ex_print(out, lev + 2, ex->binop.right);
+			break;
+
+		case EX_RETURN:
+			wrlev(out, lev, "Return: <%s>", type_repr(ex->type));
+			ex_print(out, lev + 1, ex->return_.value);
+			break;
+
+		case EX_IND:
+			wrlev(out, lev, "Indirect: <%s>", type_repr(ex->type));
+			ex_print(out, lev + 1, ex->ind.lvalue);
 			break;
 
 		default:

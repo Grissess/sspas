@@ -2,6 +2,7 @@
 #include <assert.h>
 
 #include "pass.h"
+#include "util.h"
 
 #define ASSURE(x) ({int __test = (x); if(__test<0) return __test; __test;})
 
@@ -241,8 +242,10 @@ void tr_visit_stmt(stmt_node *st, scope *sco) {
 
 void tr_visit_expr(expr_node *ex, scope *sco) {
 	size_t i;
-	symbol *sym;
+	symbol *sym = NULL;
     vector ptypes;
+	expr_node *temp;
+	scope *lsco;
 	if(!ex) {
 		return;
 	}
@@ -261,6 +264,26 @@ void tr_visit_expr(expr_node *ex, scope *sco) {
 
 		case EX_ASSIGN:
 			tr_visit_expr(ex->assign.value, sco);
+			lsco = sco;
+			while(lsco) {
+				if(string_equal(ex->assign.ident, lsco->prog->node->ident)) {
+					sym = scope_resolve_name(sco, lsco->prog->node->ident);
+					if(!sym) {
+						pass_error("Could not resolve function %s when identifying return (BUG)", lsco->prog->node->ident);
+					}
+					if(!sym->type->kind == TP_FUNC) {
+						pass_error("Program scope for %s not a function type (instead %s) (BUG)", lsco->prog->node->ident, type_repr(sym->type));
+					}
+					if(type_can_cast(ex->assign.value->type, sym->type->ret) >= CAST_UNINTENDED) {
+						temp = ex->assign.value;
+						ex->kind = EX_RETURN;
+						ex->return_.value = temp;
+						ex->type = temp->type;
+						return;
+					}
+				}
+				lsco = lsco->parent;
+			}
             sym = scope_resolve_name(sco, ex->assign.ident);
             if(!sym) {
                 pass_error("Unknown symbol %s", ex->assign.ident);
@@ -308,7 +331,21 @@ void tr_visit_expr(expr_node *ex, scope *sco) {
             ex->type = type_of_binop(ex->binop.left->type, ex->binop.kind, ex->binop.right->type);
 			break;
 
+		case EX_IND:
+			tr_visit_expr(ex->ind.lvalue, sco);
+			ex->type = type_new_array(ex->ind.lvalue->type, 0, -1);
+			break;
+
 		default:
 			assert(0);
 	}
 }
+
+/********** Location Resolution **********/
+
+int lr_pass(ast_root *ast, object *obj) {
+	return lr_visit_prog(obj->root_prog);
+}
+
+int lr_visit_prog(program *prog) {
+
