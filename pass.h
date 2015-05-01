@@ -3,6 +3,7 @@
 
 #include "ast.h"
 #include "sem.h"
+#include "cg.h"
 
 typedef int (*pass_f)(ast_root *, object *);
 typedef void (*pass_print_f)(int);
@@ -33,4 +34,19 @@ int tr_visit_prog(program *);
 void tr_visit_stmt(stmt_node *, scope *);
 void tr_visit_expr(expr_node *, scope *);
 
+int lr_pass(ast_root *, object *);
+void lr_visit_prog(program *, size_t *);
+location *lr_calc_gdentry(size_t idx);
+
+typedef struct _ir_ev_res {
+	block *block;
+	location *loc;
+} ir_ev_res;
+
+int ir_pass(ast_root *ast,object *obj);
+block *ir_visit_prog(program *prog,block *superblk);
+block *ir_make_prologue(program *prog,block *pblk);
+block *ir_make_epilogue(program *prog,block *pblk);
+block *ir_visit_stmt(stmt_node *st,block *pblk,scope *sco);
+ir_ev_res ir_visit_expr(expr_node *ex,block *pblk,scope *sco);
 #endif

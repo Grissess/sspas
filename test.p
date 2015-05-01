@@ -10,6 +10,7 @@ program main( input, output );
   (* local function: mixed argument types *)
   function foo( a: integer; x: real; z: integer ): integer;
 	procedure boo( a: real );
+	var q: array[ -5..5 ] of character;
 	begin
 		(* scope check on boo's a, main's b, d[] and y; and foo's z*)
 		boo( a * b + d[y + z] )

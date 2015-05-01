@@ -77,6 +77,7 @@ type { return TOK_TYPE; }
 \, { return TOK_COMMA; }
 \. { return TOK_DOT; }
 \.\. { return TOK_DOTDOT; }
+\@ { return TOK_INDIRECT; }
 
 [ \t\n\v\b]+ ;
 

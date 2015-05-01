@@ -194,7 +194,7 @@ void sym_print(FILE *out, int lev, symbol *sym) {
 		wrlev(out, lev, "[(NULL)]");
 		return;
 	}
-	wrlev(out, lev, "[SYM %s: %s in %s]", sym->ident, type_repr(sym->type), sym->scope?(sym->scope->prog?sym->scope->prog->node->ident:"ANONYMOUS PROGRAM"):"NULL");
+	wrlev(out, lev, "[SYM %s: %s in %s @%s]", sym->ident, type_repr(sym->type), sym->scope?(sym->scope->prog?sym->scope->prog->node->ident:"ANONYMOUS PROGRAM"):"NULL", loc_repr(sym->loc));
 	if(sym->kind == SYM_PROG) {
 		program_print(out, lev + 1, sym->init.prog);
 	}
@@ -231,7 +231,7 @@ void program_print(FILE *out, int lev, program *prog) {
 		wrlev(out, lev, "[(NULL)]");
 		return;
 	}
-	wrlev(out, lev, "[PROGRAM: %s]", prog->node->ident);
+	wrlev(out, lev, "[PROGRAM: %s #%ld]", prog->node->ident, prog->gdidx);
 	scope_print(out, lev + 1, prog->scope);
 }
 

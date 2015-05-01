@@ -1,7 +1,10 @@
 CC = gcc
 CCFLAGS = -g -Wall
 
-sspas: loc.o ast.o sem.o pass.o vector.o util.o lit.o main.o type.o lex.yy.o parser.o tokenizer.h parser.h
+#CC = nccgen -ncgcc -ncld -ncfabs
+#CCFLAGS = -g -Wall
+
+sspas: cg.o loc.o ast.o sem.o pass.o vector.o util.o lit.o main.o type.o lex.yy.o parser.o tokenizer.h parser.h
 	$(CC) $(CCFLAGS) -o $@ $^
 
 main.o: main.c toknames.c tokenizer.h parser.h
@@ -15,6 +18,9 @@ lit.o: lit.c lit.h
 
 loc.o: loc.c loc.h
 	$(CC) $(CCFLAGS) -c -o $@ loc.c
+
+cg.o: cg.c cg.h
+	$(CC) $(CCFLAGS) -c -o $@ cg.c
 
 type.o: type.c type.h
 	$(CC) $(CCFLAGS) -c -o $@ type.c

@@ -12,6 +12,7 @@ typedef struct _program {
 	size_t refcnt;
 	scope *scope;
 	prog_node *node;
+	size_t gdidx;
 } program;
 
 program *program_new(prog_node *node, scope *scope);
@@ -72,6 +73,7 @@ void scope_print(FILE *, int, scope *);
 
 typedef struct _object {
 	program *root_prog;
+	void *block; /* block * */
 } object;
 
 object *obj_new(void);

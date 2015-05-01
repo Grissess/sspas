@@ -3,12 +3,14 @@
 
 #include "pass.h"
 #include "util.h"
+#include "cg.h"
 
 #define ASSURE(x) ({int __test = (x); if(__test<0) return __test; __test;})
 
 pass passes[] = {
-	{stb_pass, NULL, "Syntax Tree Builder"},
+	{stb_pass, NULL, "Semantic Tree Builder"},
     {tr_pass, NULL, "Type Resolution/Checking"},
+	{lr_pass, NULL, "Location Resolution"},
 };
 
 object *pass_do_all(ast_root *ast) {
@@ -77,12 +79,36 @@ int stb_visit_prog(prog_node *node, program *prog) {
 }
 
 type *stb_resolve_type(type *ty, scope *sco) {
-	if(ty->kind == TP_REF) {
-		symbol *res = scope_resolve_type(sco, ty->ref);
-		if(!res) {
-			pass_error("Unresolved type name: %s", ty->ref);
-		}
-		return res->type;
+	symbol *res;
+	size_t i;
+	if(!ty) return NULL;
+	switch(ty->kind) {
+		case TP_REF:
+			res = scope_resolve_type(sco, ty->ref);
+			if(!res) {
+				pass_error("Unresolved type name: %s", ty->ref);
+			}
+			return res->type;
+
+		case TP_ARRAY:
+			ty->base = stb_resolve_type(ty->base, sco);
+			break;
+
+		case TP_FUNC:
+			ty->ret = stb_resolve_type(ty->ret, sco);
+			for(i = 0; i < ty->args.len; i++) {
+				vec_set(&ty->args, i, stb_resolve_type(vec_get(&ty->args, i, type), sco));
+			}
+			break;
+
+		case TP_STRUCT: case TP_UNION:
+			for(i = 0; i < ty->types.len; i++) {
+				vec_set(&ty->types, i, stb_resolve_type(vec_get(&ty->types, i, type), sco));
+			}
+			break;
+
+		default:
+			break;
 	}
 	return ty;
 }
@@ -94,7 +120,7 @@ type *stb_resolve_prog_type(prog_node *prog, scope *sco) {
 	for(i = 0; i < prog->args.len; i++) {
 		vec_insert(&params, params.len, stb_resolve_type(vec_get(&prog->args, i, decl_node)->type, sco));
 	}
-	return type_new_func(prog->ret, &params);
+	return type_new_func(stb_resolve_type(prog->ret, sco), &params);
 }
 
 int stb_test_decl(program *prog, decl_node *decl, vector *decls, size_t idx) {
@@ -251,7 +277,7 @@ void tr_visit_expr(expr_node *ex, scope *sco) {
 	}
 	switch(ex->kind) {
 		case EX_LIT:
-			ex->type = ex->lit.lit->type;
+			ex->type = stb_resolve_type(ex->lit.lit->type, sco);
 			break;
 
 		case EX_REF:
@@ -259,7 +285,7 @@ void tr_visit_expr(expr_node *ex, scope *sco) {
 			if(!sym) {
 				pass_error("Unknown symbol %s", ex->ref.ident);
 			}
-			ex->type = sym->type;
+			ex->type = stb_resolve_type(sym->type, sco);
 			break;
 
 		case EX_ASSIGN:
@@ -278,7 +304,7 @@ void tr_visit_expr(expr_node *ex, scope *sco) {
 						temp = ex->assign.value;
 						ex->kind = EX_RETURN;
 						ex->return_.value = temp;
-						ex->type = temp->type;
+						ex->type = stb_resolve_type(temp->type, sco);
 						return;
 					}
 				}
@@ -344,8 +370,250 @@ void tr_visit_expr(expr_node *ex, scope *sco) {
 /********** Location Resolution **********/
 
 int lr_pass(ast_root *ast, object *obj) {
-	return lr_visit_prog(obj->root_prog);
+	size_t gdidx = 0;
+	lr_visit_prog(obj->root_prog, &gdidx);
+	scope_add_name(obj->root_prog->scope, sym_new_data(SYNAME_GDISP, type_new_array(type_new_int(), 0, gdidx), loc_new_sym(SYNAME_GDISP)));
+	return 0;
 }
 
-int lr_visit_prog(program *prog) {
+void lr_visit_prog(program *prog, size_t *gdidx) {
+	size_t i;
+	vector amts;
+	location *gdbase;
+	vec_init(&amts);
+	prog->gdidx = (*gdidx)++;
+	gdbase = loc_new_ind(lr_calc_gdentry(prog->gdidx));
+	vec_insert(&amts, 0, loc_new_stride(loc_new_size(NULL), loc_new_mem(2))); /* For ret addr + pushed FP */
+	for(i = 0; i < prog->node->args.len; i++) {
+		symbol *sym = scope_resolve_name(prog->scope, vec_get(&prog->node->args, i, decl_node)->ident);
+		if(!sym) {
+			pass_error("Couldn't resolve argument %s (BUG)", vec_get(&prog->node->args, i, decl_node)->ident);
+		}
+		sym->loc = loc_new_off_vec(loc_new_reg(REG_FP), &amts);
+		vec_insert(&amts, amts.len, loc_new_size(sym->type));
+	}
+	vec_clear(&amts);
+	for(i = 0; i < prog->node->decls.len; i++) {
+		decl_node *decl = vec_get(&prog->node->decls, i, decl_node);
+		symbol *sym = scope_resolve_name(prog->scope, decl->ident);
+		if(decl->kind == DECL_TYPE) continue;
+		if(!sym) {
+			pass_error("Couldn't resolve declaration %s (BUG)", decl->ident);
+		}
+		switch(sym->kind) {
+			case SYM_PROG:
+				sym->loc = loc_new_sym(sym->init.prog->node->ident);
+				lr_visit_prog(sym->init.prog, gdidx);
+				break;
 
+			case SYM_DATA:
+				vec_insert(&amts, amts.len, loc_new_stride(loc_new_size(sym->type), loc_new_mem(-1)));
+				sym->loc = loc_new_off_vec(gdbase, &amts);
+				break;
+
+			case SYM_TYPE:
+				break;
+
+			default:
+				assert(0);
+				break;
+		}
+	}
+}
+
+location *lr_calc_gdentry(size_t idx) {
+	return loc_new_off(loc_new_sym(SYNAME_GDISP), loc_new_stride(loc_new_mem(idx), loc_new_size(NULL)));
+}
+
+/********** Intermediate Representation Generation **********/
+
+int ir_pass(ast_root *ast, object *obj) {
+	block *root = block_new(NULL);
+	block *main = ir_visit_prog(obj->root_prog, root);
+	block_append(root, main);
+	obj->block = block_copy(root);
+	return 0;
+}
+
+block *ir_visit_prog(program *prog, block *superblk) {
+	block *blk = block_new_program(superblk, prog);
+	block *prologue = ir_make_prologue(prog, blk);
+	block *body = ir_visit_stmt(prog->node->body, blk, prog->scope);
+	block *epilogue = ir_make_epilogue(prog, blk);
+	block_append(blk, prologue);
+	block_append(blk, body);
+	block_append(blk, epilogue);
+	return blk;
+}
+
+block *ir_make_prologue(program *prog, block *pblk) {
+	location *fralloc = loc_new_reg(REG_SP);
+	location *gdentry = lr_calc_gdentry(prog->gdidx);
+	block *blk = block_new(pblk);
+	size_t i;
+	for(i = 0; i < prog->node->decls.len; i++) {
+		decl_node *decl = vec_get(&prog->node->decls, i, decl_node);
+		symbol *sym = scope_resolve_name(prog->scope, decl->ident);
+		if(decl->kind != DECL_VAR) continue;
+		if(!sym) {
+			pass_error("Couldn't resolve variable %s (BUG)", decl->ident);
+		}
+		fralloc = loc_new_off(fralloc, loc_new_stride(loc_new_size(sym->type), loc_new_mem(-1)));
+	}
+	block_emit(blk, instr_new_push(loc_new_reg(REG_FP)));
+	block_emit(blk, instr_new_laddr(loc_new_reg(REG_FP), loc_new_reg(REG_SP)));
+	block_emit(blk, instr_new_push(gdentry));
+	block_emit(blk, instr_new_laddr(gdentry, loc_new_reg(REG_SP)));
+	block_emit(blk, instr_new_laddr(loc_new_reg(REG_SP), fralloc));
+	return blk;
+}
+
+block *ir_make_epilogue(program *prog, block *pblk) {
+	block *blk = block_new(pblk);
+	location *gdentry = lr_calc_gdentry(prog->gdidx);
+	block_emit(blk, instr_new_laddr(loc_new_reg(REG_SP), gdentry));
+	block_emit(blk, instr_new_pop(gdentry));
+	block_emit(blk, instr_new_pop(loc_new_reg(REG_FP)));
+	return blk;
+}
+
+block *ir_visit_stmt(stmt_node *st, block *pblk, scope *sco) {
+	size_t i;
+	block *blk = block_new(pblk), *a, *b, *c;
+	ir_ev_res x, y, z;
+	instr *la, *lb, *lc;
+	location *ta, *tb, *tc, *td, *te;
+	symbol *sa, *sb, *sc;
+	switch(st->kind) {
+		case ST_EXPR:
+			x = ir_visit_expr(st->expr.expr, blk, sco);
+			block_append(blk, x.block);
+			break;
+
+		case ST_WHILE:
+			x = ir_visit_expr(st->while_.cond, blk, sco);
+			la = instr_new_label(NULL);
+			lb = instr_new_label(NULL);
+			block_emit(blk, la);
+			block_append(blk, x.block);
+			ta = loc_new_temp(NULL);
+			block_emit(blk, instr_new_unop(ta, OP_NOT, x.loc));
+			block_emit(blk, instr_new_jumpif(lb, ta));
+			a = ir_visit_stmt(st->while_.body, blk, sco);
+			block_append(blk, a);
+			block_emit(blk, lb);
+			break;
+
+		case ST_IF:
+			x = ir_visit_expr(st->if_.cond, blk, sco);
+			la = instr_new_label(NULL);
+			block_append(x.block);
+			ta = loc_new_temp(NULL);
+			block_emit(blk, instr_new_unop(ta, OP_NOT, x.loc));
+			block_emit(blk, instr_new_jumpif(la, ta));
+			a = ir_visit_stmt(st->if_.iftrue, blk, sco);
+			block_append(blk, a);
+			block_emit(blk, la);
+			if(st->if_.iffalse) {
+				b = ir_visit_stmt(st->if_.iffalse, blk, sco);
+				block_append(blk, b);
+			}
+			break;
+
+		case ST_FOR:
+			a = ir_visit_stmt(st->for_.init, blk, sco);
+			block_append(blk, a);
+			la = instr_new_label(NULL);
+			lb = instr_new_label(NULL);
+			block_emit(blk, lb);
+			x = ir_visit_expr(st->for_.cond, blk, sco);
+			block_append(blk, x.block);
+			ta = loc_new_temp(NULL);
+			block_emit(blk, instr_new_unop(ta, OP_NOT, x.loc));
+			block_emit(blk, instr_new_jumpif(la, ta));
+			b = ir_visit_stmt(st->for_.body, blk, sco);
+			block_append(blk, b);
+			c = ir_visit_stmt(st->for_.post, blk, sco);
+			block_append(blk, c);
+			block_emit(blk, instr_new_jump(lb));
+			block_emit(blk, la);
+			break;
+
+		case ST_ITER:
+			x = ir_visit_expr(st->iter.value, blk, sco);
+			block_append(blk, x.block);
+			ta = loc_new_temp(NULL);
+			tb = loc_new_temp(NULL);
+			tc = loc_new_temp(NULL);
+			block_emit(blk, instr_new_laddr(ta, loc_new_mem(st->iter.value->type->lbound)));
+			block_emit(blk, instr_new_laddr(tb, loc_new_mem(st->iter.value->type->lbound + st->iter.value->type->size)));
+			la = instr_new_label(NULL);
+			lb = instr_new_label(NULL);
+			block_emit(blk, la);
+			block_emit(blk, instr_new_binop(tc, ta, OP_GEQ, tb));
+			block_emit(blk, instr_new_jumpif(lb, tc));
+			sa = scope_resolve_name(sco, st->iter.ident);
+			block_emit(blk, instr_new_set(sa->loc, ta));
+			a = ir_visit_stmt(st->iter.body, blk, sco);
+			block_append(blk, a);
+			block_emit(blk, instr_new_laddr(ta, loc_new_off(ta, loc_new_mem(1))));
+			block_emit(blk, instr_new_jump(la));
+			block_emit(blk, lb);
+			break;
+
+		case ST_RANGE:
+			x = ir_visit_expr(st->range.lbound, blk, sco);
+			y = ir_visit_expr(st->range.ubound, blk, sco);
+			z = ir_visit_expr(st->range.step, blk, sco);
+			block_append(blk, x.block);
+			block_append(blk, y.block);
+			block_append(blk, z.block);
+			ta = loc_new_temp(NULL);
+			tb = loc_new_temp(NULL);
+			tc = loc_new_temp(NULL);
+			td = loc_new_temp(NULL);
+			block_emit(blk, instr_new_set(ta, x.loc));
+			block_emit(blk, instr_new_set(tb, y.loc));
+			block_emit(blk, instr_new_set(tc, z.loc));
+			la = instr_new_label(NULL);
+			lb = instr_new_label(NULL);
+			block_emit(blk, la);
+			block_emit(blk, instr_new_binop(td, ta, OP_GREATER, tb));
+			block_emit(blk, instr_new_jumpif(lb, td));
+			sa = scope_resolve_name(sco, st->range.ident);
+			block_emit(blk, instr_new_set(sa->loc, ta));
+			a = ir_visit_stmt(st->iter.body, blk, sco);
+			block_append(blk, a);
+			block_emit(blk, instr_new_binop(te, ta, OP_ADD, tc));
+			block_emit(blk, instr_new_set(ta, te));
+			block_emit(blk, instr_new_jump(la));
+			block_emit(blk, lb);
+			break;
+
+		case ST_COMPOUND:
+			for(i = 0; i < st->compound.stmts.len; i++) {
+				a = ir_visit_stmt(vec_get(&st->compound.stmts, i, stmt_node), blk, sco);
+				block_append(blk, a);
+			}
+			break;
+
+		default:
+			assert(0);
+			break;
+	}
+	return blk;
+}
+
+ir_ev_res ir_visit_expr(expr_node *ex, block *pblk, scope *sco) {
+	location *ta, *tb, *tc;
+	block *blk = block_new(pblk);
+	symbol *sa, *sb, *sc;
+	switch(ex->kind) {
+		case EX_LIT:
+			switch(ex->lit.lit->kind) {
+				case LIT_INT:
+					break;
+			}
+			break;
+	}
+}
