@@ -38,7 +38,7 @@ pass.o: pass.c pass.h
 	$(CC) $(CCFLAGS) -c -o $@ pass.c
 
 toknames.c: parser.h
-	python mktoknames.py
+	python2 mktoknames.py
 
 parser.c parser.h: lemon parser.y
 	./lemon -s parser.y || true
